@@ -29,6 +29,8 @@ class MediaContext:
     # Decoded sound (16 kHz mono float32), filled in by the runner for audio files.
     # Decoding once here means every audio check can reuse it.
     audio: np.ndarray | None = None
+    # Sampled video frames (preprocessing/video.py Frame objects), filled in for videos
+    frames: list | None = None
 
 
 @dataclass

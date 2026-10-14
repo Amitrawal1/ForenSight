@@ -24,7 +24,7 @@ HOP_S = 2.0  # start a new window every 2 seconds
 MAX_WINDOWS = 40  # about 1 s per window on CPU, so long files are sampled more sparsely
 FAKE_WINDOW = 0.5  # a window counts as "fake" above this
 RELIABILITY = 0.6
-# Compressed (MP3, M4A, WhatsApp/OGG), phone-quality or short audio: in our tests real
+# Compressed (MP3, M4A, WhatsApp/OGG, video sound), phone-quality or short audio: in our tests real
 # voices then often looked exactly like AI voices. So we trust the model much less:
 # low enough that it can never call a file "AI-generated" on its own.
 LOW_RELIABILITY = 0.12
@@ -32,7 +32,6 @@ MIN_WINDOWS = 3  # fewer windows (under ~8 s of speech) = too little evidence
 # A partly-fake recording needs at least this many fake windows in a row (~10 s).
 # In our tests real speech sometimes had up to 3 odd windows in a row, never 4.
 MIN_FAKE_RUN = 4
-LOSSY_MIMES = {"audio/mpeg", "audio/mp4", "audio/ogg"}
 
 
 def _load_session():
@@ -98,7 +97,7 @@ def merge_fake_parts(segments: list[Segment]) -> list[tuple[float, float]]:
 class VoiceCloneDetector(Detector):
     name = "voice_clone"
     label = "AI-voice model"
-    media_types = ("audio",)
+    media_types = ("audio", "video")
 
     def run(self, ctx: MediaContext) -> DetectorResult | None:
         if ctx.audio is None:
@@ -126,7 +125,8 @@ class VoiceCloneDetector(Detector):
 
         # How much can we trust the model on this recording?
         problems = []
-        if ctx.mime in LOSSY_MIMES:
+        # Everything except WAV is compressed (MP3, M4A, voice notes, and the sound of videos)
+        if ctx.mime != "audio/x-wav":
             problems.append("compressed (e.g. MP3 or a messaging-app voice note)")
         elif is_phone_quality(ctx.audio):
             problems.append("phone quality")

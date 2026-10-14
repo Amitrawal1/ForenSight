@@ -31,7 +31,6 @@ DIGITAL_SILENCE_DB = -90.0  # perfect silence has no background to compare
 RELIABILITY = 0.3  # a simple check: natural noise changes (a car passing) can fool it
 # Compression (MP3, voice notes) changes the quiet parts between words, which can look
 # like a join. In our tests it caused a false alarm, so trust it less there.
-LOSSY_MIMES = {"audio/mpeg", "audio/mp4", "audio/ogg"}
 LOSSY_RELIABILITY = 0.15
 
 
@@ -114,7 +113,7 @@ def mmss(seconds: float) -> str:
 class SpliceDetector(Detector):
     name = "audio_splice"
     label = "Audio splice check"
-    media_types = ("audio",)
+    media_types = ("audio", "video")
 
     def run(self, ctx: MediaContext) -> DetectorResult | None:
         if ctx.audio is None:
@@ -133,7 +132,8 @@ class SpliceDetector(Detector):
         places = ", ".join(mmss(t) for t, _ in joins[:3])
         reasons = [f"The background sound changes suddenly at {places}, which can mean different "
                    "recordings were joined together."]
-        lossy = ctx.mime in LOSSY_MIMES
+        # Everything except WAV is compressed (MP3, M4A, voice notes, and the sound of videos)
+        lossy = ctx.mime != "audio/x-wav"
         if lossy:
             reasons.append("The file is compressed, which can also cause such changes, so this counts less.")
         return DetectorResult(

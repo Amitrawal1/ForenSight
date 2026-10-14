@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { originalUrl } from "../lib/api.js";
+import { artifactUrl, originalUrl } from "../lib/api.js";
 
 // Colour for a fake score: green (real) -> amber (unsure) -> red (fake)
 function scoreColor(score) {
@@ -13,10 +13,10 @@ function mmss(s) {
   return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 }
 
-// Audio player + waveform + one timeline row per audio check.
+// Audio or video player + waveform + one timeline row per check that scored parts of the file.
 // Click anywhere on the waveform or a timeline row to jump to that moment.
-export default function AudioPanel({ id, media, detectors = [] }) {
-  const audio = useRef(null);
+export default function MediaPanel({ id, kind, media, detectors = [] }) {
+  const audio = useRef(null); // the <audio> or <video> element
   const [time, setTime] = useState(0);
   const peaks = media?.peaks ?? [];
   const duration = media?.duration_s ?? 0;
@@ -39,9 +39,16 @@ export default function AudioPanel({ id, media, detectors = [] }) {
     <div className="pointer-events-none absolute top-0 h-full w-0.5 bg-rose-600" style={{ left: `${(time / duration) * 100}%` }} />
   );
 
+  // Video checks that saved a picture of their most suspicious frame
+  const frames = detectors.filter((d) => kind === "video" && d.heatmap && d.segments?.length > 0);
+
   return (
     <section className="rounded-xl border bg-white p-4">
-      <audio ref={audio} src={originalUrl(id)} controls className="w-full" onTimeUpdate={(e) => setTime(e.target.currentTime)} />
+      {kind === "video" ? (
+        <video ref={audio} src={originalUrl(id)} controls className="max-h-[480px] w-full rounded bg-black" onTimeUpdate={(e) => setTime(e.target.currentTime)} />
+      ) : (
+        <audio ref={audio} src={originalUrl(id)} controls className="w-full" onTimeUpdate={(e) => setTime(e.target.currentTime)} />
+      )}
 
       {peaks.length > 0 && (
         <div className="relative mt-3 cursor-pointer" onClick={seekFromClick}>
@@ -77,6 +84,24 @@ export default function AudioPanel({ id, media, detectors = [] }) {
             </div>
           </div>
         ))}
+
+      {/* Most suspicious frame, with the face-swap heatmap and a button to jump there */}
+      {frames.map((d) => {
+        const worst = d.segments.reduce((a, b) => (b.score > a.score ? b : a));
+        const at = (worst.start_s + worst.end_s) / 2;
+        return (
+          <div key={d.name} className="mt-4 rounded-lg border bg-slate-50 p-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium">Most suspicious frame ({mmss(at)})</p>
+              <button onClick={() => seekTo(at)} className="text-sm text-blue-600 hover:underline">
+                Jump to {mmss(at)}
+              </button>
+            </div>
+            <img src={artifactUrl(id, d.heatmap)} alt="Most suspicious frame" className="mt-2 max-h-80 rounded" />
+            <p className="mt-1 text-xs text-slate-500">Boxes show each face checked (red = suspicious). Red heat shows where the face model looked.</p>
+          </div>
+        );
+      })}
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
         <span>{duration.toFixed(1)} s · click anywhere to jump to that moment</span>

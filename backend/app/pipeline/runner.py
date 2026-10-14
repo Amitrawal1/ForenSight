@@ -4,6 +4,8 @@ import logging
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+from PIL import Image
+
 from app.pipeline.detectors.audio.splice import SpliceDetector
 from app.pipeline.detectors.audio.voice_clone import VoiceCloneDetector
 from app.pipeline.detectors.base import Detector, DetectorResult, MediaContext
@@ -12,11 +14,14 @@ from app.pipeline.detectors.image.ela import ElaDetector
 from app.pipeline.detectors.image.face_swap import FaceSwapDetector
 from app.pipeline.detectors.image.fft import FftDetector
 from app.pipeline.detectors.metadata.detector import MetadataDetector
+from app.pipeline.detectors.video.ai_frames import VideoAiFramesDetector
+from app.pipeline.detectors.video.faces import VideoFaceSwapDetector
 from app.pipeline.explain.reasons import explain
 from app.pipeline.fusion.combiner import combine
 from app.pipeline.models.registry import ModelNotAvailable
 from app.pipeline.preprocessing.audio import SAMPLE_RATE, AudioDecodeError, load_audio, waveform_peaks
-from app.pipeline.preprocessing.thumbnail import make_image_thumbnail
+from app.pipeline.preprocessing.thumbnail import THUMB_NAME, make_image_thumbnail
+from app.pipeline.preprocessing.video import VideoDecodeError, sample_frames
 
 log = logging.getLogger(__name__)
 
@@ -26,13 +31,12 @@ DETECTORS: list[Detector] = [
     FaceSwapDetector(),
     ElaDetector(),
     FftDetector(),
+    VideoFaceSwapDetector(),
+    VideoAiFramesDetector(),
     VoiceCloneDetector(),
     SpliceDetector(),
 ]
 
-NOT_YET_SUPPORTED = {
-    "video": "Video analysis is not available yet (planned for Phase 4).",
-}
 
 
 @dataclass
@@ -65,13 +69,27 @@ def analyse(path: Path, media_type: str, mime: str, out_dir: Path) -> Outcome:
     notes: list[str] = []
     media: dict = {}
 
-    if media_type == "audio":
+    if media_type == "video":
+        try:
+            ctx.frames, duration = sample_frames(path, out_dir / "frames")
+            media["duration_s"] = round(duration, 2)
+            # Thumbnail = the middle frame
+            Image.fromarray(ctx.frames[len(ctx.frames) // 2].rgb).save(out_dir / THUMB_NAME, quality=85)
+        except VideoDecodeError as e:
+            notes.append(f"The video could not be analysed: {e}.")
+            media_type = "unreadable"
+
+    if media_type in ("audio", "video"):
         try:
             ctx.audio = load_audio(path)
-            media = {"duration_s": round(len(ctx.audio) / SAMPLE_RATE, 2), "peaks": waveform_peaks(ctx.audio)}
+            media["peaks"] = waveform_peaks(ctx.audio)
+            media.setdefault("duration_s", round(len(ctx.audio) / SAMPLE_RATE, 2))
         except AudioDecodeError as e:
-            notes.append(f"The audio could not be analysed: {e}.")
-            media_type = "unreadable"  # no detector will run
+            if media_type == "audio":
+                notes.append(f"The audio could not be analysed: {e}.")
+                media_type = "unreadable"  # no detector will run
+            else:
+                notes.append("The video has no readable sound track, so only the picture was checked.")
 
     for det in DETECTORS:
         if media_type not in det.media_types:
@@ -91,14 +109,15 @@ def analyse(path: Path, media_type: str, mime: str, out_dir: Path) -> Outcome:
         if res is not None:
             results.append((det, res))
 
-    if media_type in NOT_YET_SUPPORTED:
-        notes.append(NOT_YET_SUPPORTED[media_type])
 
     detector_results = [r for _, r in results]
     verdict, confidence = combine(detector_results)
     summary, reasons = explain(verdict, detector_results)
 
-    thumbnail = make_image_thumbnail(path, out_dir) if media_type == "image" else None
+    if media_type == "image":
+        thumbnail = make_image_thumbnail(path, out_dir)
+    else:
+        thumbnail = THUMB_NAME if (out_dir / THUMB_NAME).is_file() else None
 
     return Outcome(
         verdict=verdict,

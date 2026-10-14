@@ -12,6 +12,7 @@ Steps for each face:
 """
 
 import re
+from dataclasses import dataclass
 
 import cv2
 import numpy as np
@@ -111,58 +112,88 @@ def face_part(cam: np.ndarray) -> str:
     return "mouth and jaw"
 
 
+@dataclass
+class FaceCheck:
+    """Result for one face: where it is, how fake it looks, and (optional) where the model looked."""
+
+    face: Face
+    box: tuple[int, int, int, int]  # x0, y0, x1, y1 including the extra margin
+    prob: float
+    cam: np.ndarray | None = None  # heatmap inside `box`, only for suspicious faces
+
+
+def check_faces(rgb: np.ndarray, with_heatmap: bool = True) -> list[FaceCheck]:
+    """Find faces in an RGB image and score each one. Used for photos and video frames."""
+    import torch
+
+    faces = [f for f in detect_faces(rgb) if min(f.w, f.h) >= MIN_FACE_PX][:MAX_FACES]
+    if not faces:
+        return []
+    model = load_cached("dfdc_b7", _load_model)
+
+    results = []
+    for face in faces:
+        x0, y0, x1, y1 = face_box(rgb, face)
+        x, (left, top, nw, nh) = prepare(rgb[y0:y1, x0:x1])
+        tensor = torch.from_numpy(x)
+        with torch.no_grad():
+            prob = float(torch.sigmoid(model(tensor)[0, 0]))
+
+        cam = None
+        if with_heatmap and prob >= 0.5:
+            # Where did the model look? Map the heatmap from the 380x380 square
+            # back to the face area of the original image.
+            cam = grad_cam(lambda t: model(t)[0, 0], model.encoder.bn2, tensor)
+            cam = cv2.resize(cam, (INPUT_SIZE, INPUT_SIZE))[top : top + nh, left : left + nw]
+            cam = cv2.resize(cam, (x1 - x0, y1 - y0))
+        results.append(FaceCheck(face, (x0, y0, x1, y1), prob, cam))
+    return results
+
+
+def draw_faces(rgb: np.ndarray, checks: list[FaceCheck]) -> np.ndarray:
+    """Picture for the result page: heatmap + a box around each face (red = suspicious)."""
+    heat = np.zeros(rgb.shape[:2], dtype=np.float32)
+    for c in checks:
+        if c.cam is not None:
+            x0, y0, x1, y1 = c.box
+            heat[y0:y1, x0:x1] = np.maximum(heat[y0:y1, x0:x1], c.cam)
+    out = make_overlay(rgb, heat)
+    for c in checks:
+        color = (0, 0, 230) if c.prob >= 0.5 else (60, 200, 60)  # BGR
+        cv2.rectangle(out, c.box[:2], c.box[2:], color, max(2, rgb.shape[1] // 300))
+    return out
+
+
+def face_label(check: FaceCheck, index: int, total: int, rgb: np.ndarray) -> str:
+    """'The face' or 'Face 2 (upper left)'."""
+    if total == 1:
+        return "The face"
+    f = check.face
+    return f"Face {index} ({region_name(f.y + f.h / 2, f.x + f.w / 2, rgb.shape[0], rgb.shape[1])})"
+
+
 class FaceSwapDetector(Detector):
     name = "face_swap"
     label = "Face-swap model"
     media_types = ("image",)
 
     def run(self, ctx: MediaContext) -> DetectorResult | None:
-        import torch
-
         with Image.open(ctx.path) as img:
             rgb = np.asarray(ImageOps.exif_transpose(img).convert("RGB"))
-        faces = [f for f in detect_faces(rgb) if min(f.w, f.h) >= MIN_FACE_PX][:MAX_FACES]
-        if not faces:
+        checks = check_faces(rgb)
+        if not checks:
             return None  # no face big enough: this check does not apply
 
-        model = load_cached("dfdc_b7", _load_model)
-        img_h, img_w = rgb.shape[:2]
-        heat = np.zeros((img_h, img_w), dtype=np.float32)
-        overlay_boxes = []
-        reasons, probs = [], []
+        cv2.imwrite(str(ctx.out_dir / HEATMAP_NAME), draw_faces(rgb, checks))
 
-        for i, face in enumerate(faces, start=1):
-            x0, y0, x1, y1 = face_box(rgb, face)
-            x, (left, top, nw, nh) = prepare(rgb[y0:y1, x0:x1])
-            tensor = torch.from_numpy(x)
-
-            with torch.no_grad():
-                prob = float(torch.sigmoid(model(tensor)[0, 0]))
-            probs.append(prob)
-            where = region_name(face.y + face.h / 2, face.x + face.w / 2, img_h, img_w)
-            label = f"Face {i} ({where})" if len(faces) > 1 else "The face"
-
-            if prob >= 0.5:
-                # Where did the model look? Map the heatmap from the 380x380 square
-                # back to the face area of the original photo.
-                cam = grad_cam(lambda t: model(t)[0, 0], model.encoder.bn2, tensor)
-                cam = cv2.resize(cam, (INPUT_SIZE, INPUT_SIZE))[top : top + nh, left : left + nw]
-                cam = cv2.resize(cam, (x1 - x0, y1 - y0))
-                heat[y0:y1, x0:x1] = np.maximum(heat[y0:y1, x0:x1], cam)
-                reasons.append(f"{label} looks {round(prob * 100)}% likely to be swapped or altered; "
-                               f"the model focused most on the {face_part(cam)}.")
-            overlay_boxes.append((x0, y0, x1, y1, prob))
-
-        # Picture for the result page: heatmap + a box around each face (red = suspicious)
-        out = make_overlay(rgb, heat)
-        for x0, y0, x1, y1, prob in overlay_boxes:
-            color = (0, 0, 230) if prob >= 0.5 else (60, 200, 60)  # BGR
-            cv2.rectangle(out, (x0, y0), (x1, y1), color, max(2, img_w // 300))
-        cv2.imwrite(str(ctx.out_dir / HEATMAP_NAME), out)
-
-        top_prob = max(probs)
+        reasons = []
+        for i, c in enumerate(checks, start=1):
+            if c.cam is not None:
+                reasons.append(f"{face_label(c, i, len(checks), rgb)} looks {round(c.prob * 100)}% likely to be "
+                               f"swapped or altered; the model focused most on the {face_part(c.cam)}.")
+        top_prob = max(c.prob for c in checks)
         if not reasons:
-            count = f"{len(faces)} faces were" if len(faces) > 1 else "The face was"
+            count = f"{len(checks)} faces were" if len(checks) > 1 else "The face was"
             reasons.append(f"{count} checked for face swapping; none looks altered "
                            f"(highest {round(top_prob * 100)}%).")
         reasons.append("Face-swap detection is less reliable on photos unlike its training videos, "

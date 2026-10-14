@@ -209,7 +209,9 @@ ForenSight/
       DFDC face-swap EfficientNet-B7, Grad-CAM heatmaps, per-kind fusion, result-page tabs.
 - [x] **Phase 3 — Audio** (2026-10-14): XLSR-SLS AI-voice model per window, splice check,
       timeline, OGG voice notes.
-- [ ] **Phase 4 — Video**: frame sampling, face crops, temporal checks, lip-sync.
+- [x] **Phase 4 — Video** (2026-10-14): frame sampling, per-frame face-swap + AI-image
+      checks, sound-track audio checks, video metadata, video player + timeline + worst frame.
+      (Lip-sync and blink/head-pose checks not done — stretch goals.)
 - [ ] **Phase 5 — Explanations & PDF report**, history page.
 - [ ] **Phase 6 — Fine-tuning** on datasets, evaluation metrics, demo polish.
 
@@ -595,3 +597,45 @@ speech → Likely Authentic; real speech with a TTS sentence inserted → **Mani
 Tests: 56 passing.
 
 **Next**: Phase 4 — video (frames → face/AI-image checks per second + sound track → timeline).
+
+### 2026-10-14 — Session 5: Phase 4 (video) in one chunk
+**Frames** (`preprocessing/video.py`): duration parsed from `ffmpeg -i` output (no ffprobe
+needed; imageio-ffmpeg has none). Up to **16 frames** evenly spread (max 1 fps), shrunk to
+≤ 1280 px, JPEG q2 so we add few compression traces; temp files deleted after loading.
+Frame time = (i + 0.5) / fps. `VideoDecodeError` → Inconclusive + note.
+`MediaContext.frames` added. Runner: video → frames + thumbnail (middle frame) + sound
+track (if none: note "only the picture was checked") → `media = {duration_s, peaks}`.
+
+**Refactor**: `face_swap.py` now has `check_faces(rgb, with_heatmap)`, `draw_faces()`,
+`face_label()` — shared by photos and video frames (photo behaviour unchanged, tests pass).
+
+**Video checks**
+- `video/faces.py` `VideoFaceSwapDetector` (manipulated, trust 0.5; 0.3 if faces in < 4
+  frames): per-frame score = most suspicious face; video score = **DFDC "confident
+  strategy"** (many frames > 0.8 → mean of those; > 90 % frames < 0.2 → mean of those; else
+  mean). Grad-CAM only on the worst frame → `video_faces.png`. Timeline segments per frame.
+- `video/ai_frames.py` `VideoAiFramesDetector` (ai_generated, trust 0.4 — model trained on
+  stills, video compression differs): mean AI probability over frames, per-frame segments.
+- Audio detectors (`voice_clone`, `splice`) now also run on videos. "Lossy" is now simply
+  **anything except WAV** (video sound is AAC) → low trust, as decided in Phase 3.
+- Metadata for video: scan first + last 4 MB for IPTC trainedAlgorithmicMedia (decisive),
+  AI tool names (added Sora, Veo, Runway, Pika, Kling, Synthesia, HeyGen), C2PA presence.
+
+**Frontend**: `AudioPanel.jsx` → **`MediaPanel.jsx`** (audio or video player, waveform,
+timeline rows, plus "Most suspicious frame (m:ss)" card with heatmap and a Jump button).
+
+**Evaluation (synthetic videos made with ffmpeg; no real deepfake videos available)**
+| Video | Verdict | Time (this Mac, CPU) |
+|---|---|---|
+| Real face photo zoom + real speech | Likely Authentic | 26 s |
+| Crude face swap zoom + real speech | **Manipulated 71 %** (12/12 frames 0.99, worst frame 0:05) | 45 s (2 faces/frame) |
+| Stable Diffusion slideshow + TTS | **AI-Generated 74 %** (12/12 frames AI) | 5 s (no faces) |
+| 10 real LFW faces, no sound | Likely Authentic (2/12 frames false alarm, DFDC strategy averaged them out) | 17 s |
+Tests: 62 passing (frame spread/cap, not-a-video error, no-sound note, video upload API,
+DFDC strategy). Checked in headless Chrome.
+
+**Known gaps**: no lip-sync / blink / head-pose checks; no tests on real deepfake videos
+(DFDC / FaceForensics++ / Celeb-DF need access requests); the face model's frames-from-photo
+test videos are much easier than real deepfakes. Speed: ~1 s per face per frame on CPU.
+
+**Next**: Phase 5 — PDF report + history page + delete button.

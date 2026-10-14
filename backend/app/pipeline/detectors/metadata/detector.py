@@ -28,6 +28,14 @@ AI_TOOLS = {
     "adobe firefly": "Adobe Firefly",
     "leonardo.ai": "Leonardo.ai",
     "ideogram": "Ideogram",
+    # AI video tools
+    "openai sora": "OpenAI Sora",
+    "google veo": "Google Veo",
+    "runwayml": "Runway",
+    "pika labs": "Pika",
+    "kling ai": "Kling",
+    "synthesia": "Synthesia",
+    "heygen": "HeyGen",
 }
 
 EDITORS = {
@@ -47,6 +55,7 @@ EDITORS = {
 SD_PNG_KEYS = ("parameters", "prompt", "workflow", "sd-metadata", "invokeai_metadata")
 
 XMP_RE = re.compile(rb"<x:xmpmeta.*?</x:xmpmeta>", re.DOTALL)
+VIDEO_SCAN_BYTES = 4 * 1024 * 1024  # look at the first and last 4 MB of a video
 
 
 @dataclass
@@ -61,11 +70,14 @@ class Finding:
 class MetadataDetector(Detector):
     name = "metadata"
     label = "File metadata"
-    media_types = ("image",)
+    media_types = ("image", "video")
 
     def run(self, ctx: MediaContext) -> DetectorResult | None:
         if ctx.media_type not in self.media_types:
             return None
+
+        if ctx.media_type == "video":
+            return self._run_video(ctx)
 
         raw = ctx.path.read_bytes()
         with Image.open(ctx.path) as img:
@@ -137,3 +149,30 @@ class MetadataDetector(Detector):
             decisive=main.decisive,
             reasons=[f.reason for f in sorted(findings, key=lambda f: -f.reliability)] + notes,
         )
+
+    def _run_video(self, ctx: MediaContext) -> DetectorResult:
+        """Videos: search the start and end of the file, where MP4 tools write their tags,
+        for AI-tool names, the IPTC "made by AI" label and Content Credentials (C2PA)."""
+        size = ctx.path.stat().st_size
+        with ctx.path.open("rb") as f:
+            head = f.read(VIDEO_SCAN_BYTES)
+            f.seek(max(0, size - VIDEO_SCAN_BYTES))
+            tail = f.read()
+        raw = head + tail
+        text = raw.decode("latin-1").lower()
+
+        if "trainedalgorithmicmedia" in text and "composite" not in text:
+            return DetectorResult(self.name, fake_score=0.95, reliability=0.9, fake_kind="ai_generated", decisive=True,
+                                  reasons=["The video's metadata declares it was created by generative AI "
+                                           "(IPTC: trained algorithmic media)."])
+        ai_tool = next((v for k, v in AI_TOOLS.items() if k in text), None)
+        if ai_tool:
+            return DetectorResult(self.name, fake_score=0.9, reliability=0.8, fake_kind="ai_generated",
+                                  reasons=[f"The video's metadata mentions the AI tool {ai_tool}."])
+        notes = []
+        if b"c2pa" in raw:
+            notes.append("The video carries Content Credentials (C2PA). Their signature is not verified "
+                         "in this version.")
+        notes.append("No AI-tool information was found in the video's metadata. Most videos carry none, "
+                     "so this is not evidence either way.")
+        return DetectorResult(self.name, fake_score=0.5, reliability=0.0, reasons=notes)

@@ -48,7 +48,7 @@ export default function UploadPage() {
       {error && <p className="mt-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
       <p className="mt-6 text-xs text-slate-500">
         Image checks: AI-image model, face-swap model, metadata, error level analysis, frequency analysis. Audio checks: AI-voice model, splice check. Video
-        analysis is coming in the next phase.
+        checks: face-swap and AI-image models on sampled frames, plus all audio checks on the sound track.
       </p>
     </section>
   );

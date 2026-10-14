@@ -4,7 +4,7 @@ import { goTo } from "../lib/useHashRoute.js";
 import VerdictCard from "../components/VerdictCard.jsx";
 import EvidenceViewer from "../components/EvidenceViewer.jsx";
 import DetectorList from "../components/DetectorList.jsx";
-import AudioPanel from "../components/AudioPanel.jsx";
+import MediaPanel from "../components/MediaPanel.jsx";
 
 const POLL_MS = 1500;
 
@@ -66,7 +66,9 @@ export default function AnalysisPage({ id }) {
       {back}
       <VerdictCard analysis={analysis} />
       {analysis.media_type === "image" && <EvidenceViewer id={analysis.id} detectors={ev.detectors} />}
-      {analysis.media_type === "audio" && <AudioPanel id={analysis.id} media={ev.media} detectors={ev.detectors} />}
+      {(analysis.media_type === "audio" || analysis.media_type === "video") && (
+        <MediaPanel id={analysis.id} kind={analysis.media_type} media={ev.media} detectors={ev.detectors} />
+      )}
       {ev.notes?.length > 0 && (
         <ul className="space-y-1 text-sm text-slate-600">
           {ev.notes.map((n) => (

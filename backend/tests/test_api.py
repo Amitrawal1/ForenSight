@@ -93,3 +93,15 @@ def test_ogg_voice_note_type_is_accepted(tmp_path):
     p = tmp_path / "note.opus"
     p.write_bytes(b"OggS" + b"\x00" * 60)
     assert detect(p) == ("audio", "audio/ogg")
+
+
+@pytest.mark.skipif(ffmpeg_exe() is None, reason="ffmpeg not installed")
+def test_video_upload_gives_duration_and_waveform(client, tmp_path):
+    from tests.test_video import make_video
+
+    data = make_video(tmp_path / "v.mp4", 5.0).read_bytes()
+    body = upload(client, "clip.mp4", data).json()
+    assert body["status"] == "done" and body["media_type"] == "video"
+    assert abs(body["evidence"]["media"]["duration_s"] - 5.0) < 0.2
+    assert len(body["evidence"]["media"]["peaks"]) == 400
+    assert body["thumbnail_path"] == "thumb.jpg"
