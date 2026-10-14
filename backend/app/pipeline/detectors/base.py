@@ -18,22 +18,35 @@ class Segment:
 
 
 @dataclass
+class MediaContext:
+    path: Path
+    media_type: str  # image | video | audio
+    mime: str
+    # Where the detector may write heatmaps / spectra (storage/artifacts/<analysis id>/)
+    out_dir: Path
+
+
+@dataclass
 class DetectorResult:
     name: str
     # 0.0 = looks real, 1.0 = looks fake
     fake_score: float
-    # How much this detector trusts its own score (0..1); low for e.g. tiny/compressed inputs
+    # How much this detector trusts its own score (0..1); low for e.g. tiny/compressed inputs.
+    # 0 means "informational only" — shown to the user but ignored by fusion.
     reliability: float
     # "ai_generated" | "manipulated" — what kind of fake this detector points to
     fake_kind: str = "manipulated"
     reasons: list[str] = field(default_factory=list)
-    heatmap_path: Path | None = None
+    # File name inside MediaContext.out_dir
+    heatmap: str | None = None
     segments: list[Segment] = field(default_factory=list)
 
 
 class Detector(ABC):
     name: str
+    label: str  # shown in the UI
     media_types: tuple[str, ...]
 
     @abstractmethod
-    def run(self, path: Path) -> DetectorResult: ...
+    def run(self, ctx: MediaContext) -> DetectorResult | None:
+        """Return None when the check does not apply to this file (e.g. ELA on a PNG)."""

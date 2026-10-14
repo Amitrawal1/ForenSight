@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     models_dir: Path = Path("./models")
     max_upload_mb: int = 200
     cors_origins: str = "http://localhost:5173"
+    # Run Celery tasks inline (tests / no Redis)
+    celery_always_eager: bool = False
 
     @property
     def upload_dir(self) -> Path:
@@ -19,6 +21,11 @@ class Settings(BaseSettings):
     @property
     def report_dir(self) -> Path:
         return self.storage_dir / "reports"
+
+    @property
+    def artifact_dir(self) -> Path:
+        """Heatmaps, spectra and thumbnails, one sub-folder per analysis."""
+        return self.storage_dir / "artifacts"
 
 
 @lru_cache

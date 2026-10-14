@@ -9,3 +9,6 @@
 4. Never run ML training yourself — write the code and give the user the command to run.
 5. Never `git commit` / push; the user commits manually. No Claude attribution lines.
 6. The project name is **ForenSight** (the proposal's "TruthLens" mentions are outdated).
+7. **Comments must be simple and basic** — short plain-English sentences that any developer
+   can understand. Explain what a block does and why; explain technical terms (e.g. "z-score",
+   "FFT") in a few words the first time they appear in a file.

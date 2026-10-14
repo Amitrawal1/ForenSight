@@ -58,15 +58,36 @@ Upload ─► Preprocessing ─► Detectors (parallel) ─► Fusion ─► Exp
 
 | Step | Code location |
 |------|---------------|
-| Upload API | `backend/app/api/routes/analysis.py` |
-| Job queue (long videos) | `backend/app/workers/tasks.py` (Celery + Redis) |
-| Preprocessing | `backend/app/pipeline/preprocessing/` |
+| Upload / status / history / delete API | `backend/app/api/routes/analysis.py` |
+| Upload storage (generated names, size limit) | `backend/app/services/storage.py` |
+| Job queue | `backend/app/workers/tasks.py` (Celery + Redis) |
+| Orchestration (detectors → fusion → explain) | `backend/app/pipeline/runner.py` |
+| Preprocessing (file type by magic bytes, thumbnail) | `backend/app/pipeline/preprocessing/` |
 | Detectors | `backend/app/pipeline/detectors/{image,video,audio,metadata}/` |
-| Detector contract | `backend/app/pipeline/detectors/base.py` |
+| Detector contract (`MediaContext`, `DetectorResult`) | `backend/app/pipeline/detectors/base.py` |
 | Fusion → verdict | `backend/app/pipeline/fusion/combiner.py` |
-| Explanations | `backend/app/pipeline/explain/` |
-| PDF report | `backend/app/reports/pdf_report.py` (ReportLab) |
+| Explanations (templates, heatmap overlay) | `backend/app/pipeline/explain/` |
+| PDF report | `backend/app/reports/` (Phase 5) |
 | History | MySQL table `analyses` (`backend/app/db/models.py`) |
+
+### API (Phase 1)
+
+| Method & path | Purpose |
+|---|---|
+| `POST /api/analyses` (multipart `file`) | Save upload, detect type, create row, queue job → 201 + analysis. 413 too large, 415 unsupported |
+| `GET /api/analyses` | History list (newest first) |
+| `GET /api/analyses/{id}` | Status + verdict + evidence (frontend polls every 1.5 s) |
+| `GET /api/analyses/{id}/original` | The uploaded file |
+| `GET /api/analyses/{id}/artifacts/{name}` | `thumb.jpg`, `ela.png`, `spectrum.png` (name regex-validated) |
+| `DELETE /api/analyses/{id}` | Delete file, artifacts and row |
+
+Files on disk: uploads in `storage/uploads/<random hex>`, generated images in
+`storage/artifacts/<analysis id>/`.
+
+### Evidence JSON (stored in `analyses.evidence`)
+`{summary, reasons[top 3], notes[], detectors: [{name, label, fake_score, reliability,
+fake_kind, reasons[], heatmap, segments[]}]}`. `reliability = 0` means "info only" —
+shown to the user, ignored by fusion.
 
 ### Detection modules (from proposal §2.3)
 
@@ -182,8 +203,8 @@ ForenSight/
 ## 10. Roadmap
 
 - [x] **Phase 0 — Skeleton**: folder structure, Docker compose, health endpoint, memory file.
-- [ ] **Phase 1 — Upload → result loop with heuristics only**: upload API, DB row, Celery
-      task, metadata detector (EXIF/C2PA), image ELA + FFT detectors, fusion, result page.
+- [x] **Phase 1 — Upload → result loop with heuristics only** (2026-10-14): upload API, DB row,
+      Celery task, metadata + ELA + FFT detectors, fusion, explanations, upload + result pages.
 - [ ] **Phase 2 — Pretrained image model** (HF checkpoint) + Grad-CAM heatmap.
 - [ ] **Phase 3 — Audio**: spectrogram anti-spoofing model + segment timeline.
 - [ ] **Phase 4 — Video**: frame sampling, face crops, temporal checks, lip-sync.
@@ -212,3 +233,86 @@ ForenSight/
 - **Notes**: Docker was **not installed** on the Mac at this time → install Docker Desktop
   before first `docker compose up`. Nothing has been built/run yet.
 - **Next**: Phase 1 — real upload endpoint + metadata & image heuristic detectors.
+
+### 2026-10-13 — Session 1b: Git remote + full build plan
+- **Git**: `git add .` failed with "'ForenSight/' does not have a commit checked out" because an
+  empty nested repo (`ForenSight/ForenSight/.git`) existed — Git treats nested repos as
+  submodules. User removed it. Remote `origin` = https://github.com/Amitrawal1/ForenSight.git.
+  User commits/pushes manually.
+- **Build plan PDF**: `~/Desktop/ForenSight_Build_Plan.pdf` (copy in `docs/build_plan.pdf`).
+  Key decisions recorded there:
+  - Pretrained-first, fine-tune on Colab/Kaggle GPU, never train from scratch.
+  - Build order image → audio → video (video reuses both).
+  - Image: metadata/C2PA (c2pa-python), ELA, FFT residual + logistic regression,
+    CLIP ViT-L/14 linear probe (UnivFD) for AI images, EfficientNet face classifier + Grad-CAM.
+  - Audio: AASIST or wav2vec2/XLS-R front end; splice + prosody heuristics (low reliability).
+  - Video: per-frame face classifier, temporal consistency, blink/head-pose (MediaPipe),
+    SyncNet lip-sync as stretch goal.
+  - Fusion: weighted average now → calibrated logistic regression later; thresholds from validation.
+  - Explanations: deterministic templates (no LLM-invented evidence).
+  - Split data by identity/source; compression augmentation; cross-dataset evaluation.
+  - Cut line if time is short: Phases 1–3 + simple PDF, video-lite.
+- **Next**: user installs Docker, applies for gated datasets; then Phase 1.
+
+### 2026-10-14 — Session 2: Phase 1 built (upload → result loop)
+**What was built**
+- Backend API: upload (streams to disk, 413 over limit, type detected from bytes → 415 if
+  unsupported), get, list, delete, serve original + artifacts. Schemas in `app/schemas/analysis.py`.
+- DB: added `mime_type` and `error` columns; enums stored by *value* (`likely_authentic` …)
+  so MySQL rows are readable. Tables are still created with `create_all` (no Alembic yet) →
+  if columns change later, wipe the dev DB with `docker compose down -v` or add Alembic.
+- Celery task `run_analysis`: queued → processing → done/failed (error message saved).
+- `pipeline/runner.py`: runs every applicable detector; one crashing detector only adds a
+  note, it doesn't fail the analysis. Video/audio are accepted but return Inconclusive with a
+  "coming in Phase 3/4" note.
+- Detector contract changed: `run(ctx: MediaContext) -> DetectorResult | None`
+  (None = check doesn't apply, e.g. ELA on PNG). Added `label` for the UI, `heatmap` is a
+  file name inside the analysis' artifact folder.
+- **Metadata detector**: IPTC DigitalSourceType (`trainedAlgorithmicMedia` → AI, `composite…`
+  → manipulated, strong), Stable-Diffusion PNG fields (`parameters`, `prompt`, `workflow` …,
+  strong), AI tool names (strong), editor names like Photoshop (weak, 0.3 reliability —
+  editing ≠ fake), camera Make/Model (weak sign of authenticity). C2PA: only *presence* is
+  detected (byte search for `c2pa`) — signature verification with `c2pa-python` is TODO.
+  No metadata at all → info only (reliability 0), because social media strips it.
+- **ELA detector** (JPEG only): re-save at q90, per-16px-block error **divided by local
+  texture** (Sobel) so busy areas don't look edited, robust z-score (median/MAD), largest
+  connected cluster of outlier blocks → score. Heatmap overlay `ela.png`. Reliability 0.35
+  (0.15 if the image is heavily recompressed).
+- **FFT detector**: spectrum of the median-filter noise residual, each frequency compared
+  with others at the same radius (z-score on log magnitude), ≥2 peaks above z=4 → AI-like.
+  JPEG 8×8 grid frequencies are masked **only for JPEGs** (first version masked them for all
+  images, which also hid real generator artifacts — bug found during calibration).
+  Reliability 0.3 PNG/WEBP, 0.15 JPEG. Saves `spectrum.png`.
+- Explanations: template sentences only; top 3 reasons are picked from detectors that agree
+  with the verdict, ranked by reliability × |score − 0.5|.
+- Frontend: hash routes `#/` (upload, drag-and-drop) and `#/analysis/<id>` (polls every
+  1.5 s → verdict card with confidence bar + "Why" reasons, image with ELA heatmap opacity
+  slider, spectrum panel, per-check evidence list).
+- Tests (15, all passing locally on SQLite with `CELERY_ALWAYS_EAGER=true` via
+  `tests/conftest.py`): API flow, SD-PNG → ai_generated, wrong extension detected by bytes,
+  bad type 415, artifact path validation, history + delete, metadata cases, fusion.
+  Run in Docker: `docker compose run --rm backend pytest`.
+
+**Calibration (synthetic, hand-tuned — NOT real accuracy numbers)**
+- Test images: scikit-image sample photos saved as JPEG q92.
+- ELA: 3/5 splices (q60 patch pasted, re-saved q92) flagged; 0/5 real photos flagged as
+  fake (1 landed in the inconclusive band).
+- FFT: 5/5 images with an added faint period-4 checkerboard flagged; 0/10 real flagged.
+  Period-2 artifacts (at the spectrum corners) are **not** detected — known limitation.
+- Why it matters: with these low reliabilities most real-world images will come out
+  **Inconclusive** until Phase 2 adds a learned classifier. That is intended, not a bug.
+
+**Why this order**: metadata/ELA/FFT need no training data or GPU, so the full
+upload → verdict → explanation loop could be built and tested end-to-end first.
+
+**Not verified yet**: nothing has run inside Docker (Docker still not installed). The
+frontend was checked with `vite build` only, not clicked through in a browser.
+
+**Next (Phase 2)**: CLIP ViT-L/14 linear probe for AI images (UnivFD) + face-swap classifier
+with Grad-CAM; replace hand-set thresholds once data is available.
+
+### 2026-10-14 — Session 2b: comment style
+- User asked for **simple, basic comments** so other developers can read the code easily.
+  Rule added to CLAUDE.md (#7). Rewrote comments in `ela.py`, `fft.py`, `heatmap.py` in
+  plain English (no unexplained jargon like MAD / z-score / residual). No logic changed;
+  15 tests still pass.

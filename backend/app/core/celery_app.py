@@ -10,7 +10,11 @@ celery_app = Celery(
     backend=settings.redis_url,
     include=["app.workers.tasks"],
 )
-celery_app.conf.update(task_track_started=True, result_expires=3600)
+celery_app.conf.update(
+    task_track_started=True,
+    result_expires=3600,
+    task_always_eager=settings.celery_always_eager,
+)
 
 # `celery -A app.core.celery_app` looks for an attribute named `app` or `celery`
 app = celery_app

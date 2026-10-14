@@ -15,6 +15,7 @@ settings = get_settings()
 async def lifespan(_: FastAPI):
     settings.upload_dir.mkdir(parents=True, exist_ok=True)
     settings.report_dir.mkdir(parents=True, exist_ok=True)
+    settings.artifact_dir.mkdir(parents=True, exist_ok=True)
     # TODO: switch to Alembic migrations once the schema settles
     Base.metadata.create_all(engine)
     yield

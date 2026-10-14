@@ -1,2 +1,4 @@
-Image detectors: pretrained real/fake classifier (+ Grad-CAM heatmap), FFT frequency
-artifacts, Error Level Analysis, noise residual inconsistency.
+Image detectors.
+- `ela.py` — Error Level Analysis (JPEG only), heatmap `ela.png`.
+- `fft.py` — hidden repeating patterns left by AI generators, `spectrum.png`.
+- Phase 2: pretrained real/fake classifier (CLIP linear probe) + face classifier with Grad-CAM.
