@@ -13,6 +13,7 @@ from app.pipeline.detectors.metadata.detector import MetadataDetector
 from app.pipeline.explain.reasons import explain
 from app.pipeline.fusion.combiner import combine
 from app.pipeline.models.registry import ModelNotAvailable
+from app.pipeline.preprocessing.audio import SAMPLE_RATE, AudioDecodeError, load_audio, waveform_peaks
 from app.pipeline.preprocessing.thumbnail import make_image_thumbnail
 
 log = logging.getLogger(__name__)
@@ -40,9 +41,17 @@ class Outcome:
     detectors: list[dict] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
     thumbnail: str | None = None
+    # Extra info for the result page, e.g. audio duration and waveform
+    media: dict = field(default_factory=dict)
 
     def evidence(self) -> dict:
-        return {"summary": self.summary, "reasons": self.reasons, "detectors": self.detectors, "notes": self.notes}
+        return {
+            "summary": self.summary,
+            "reasons": self.reasons,
+            "detectors": self.detectors,
+            "notes": self.notes,
+            "media": self.media,
+        }
 
 
 def analyse(path: Path, media_type: str, mime: str, out_dir: Path) -> Outcome:
@@ -51,6 +60,16 @@ def analyse(path: Path, media_type: str, mime: str, out_dir: Path) -> Outcome:
 
     results: list[tuple[Detector, DetectorResult]] = []
     notes: list[str] = []
+    media: dict = {}
+
+    if media_type == "audio":
+        try:
+            ctx.audio = load_audio(path)
+            media = {"duration_s": round(len(ctx.audio) / SAMPLE_RATE, 2), "peaks": waveform_peaks(ctx.audio)}
+        except AudioDecodeError as e:
+            notes.append(f"The audio could not be analysed: {e}.")
+            media_type = "unreadable"  # no detector will run
+
     for det in DETECTORS:
         if media_type not in det.media_types:
             continue
@@ -86,4 +105,5 @@ def analyse(path: Path, media_type: str, mime: str, out_dir: Path) -> Outcome:
         detectors=[{"label": det.label, **asdict(res)} for det, res in results],
         notes=notes,
         thumbnail=thumbnail,
+        media=media,
     )

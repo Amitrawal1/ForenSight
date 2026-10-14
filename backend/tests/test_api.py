@@ -2,7 +2,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from tests.helpers import jpeg_bytes, photo_like, png_bytes
+from app.pipeline.preprocessing.audio import ffmpeg_exe
+from tests.helpers import jpeg_bytes, photo_like, png_bytes, wav_bytes
 
 
 @pytest.fixture(scope="module")
@@ -67,3 +68,20 @@ def test_history_and_delete(client):
 
     assert client.delete(f"/api/analyses/{aid}").status_code == 204
     assert client.get(f"/api/analyses/{aid}").status_code == 404
+
+
+@pytest.mark.skipif(ffmpeg_exe() is None, reason="ffmpeg not installed")
+def test_audio_upload_gives_waveform(client):
+    body = upload(client, "voice.wav", wav_bytes(seconds=10.0)).json()
+    assert body["status"] == "done" and body["media_type"] == "audio"
+    media = body["evidence"]["media"]
+    assert abs(media["duration_s"] - 10.0) < 0.1
+    assert len(media["peaks"]) == 400
+
+
+@pytest.mark.skipif(ffmpeg_exe() is None, reason="ffmpeg not installed")
+def test_unreadable_audio_is_inconclusive_with_note(client):
+    body = upload(client, "broken.wav", b"RIFF\x00\x00\x00\x00WAVEgarbage" + b"\x00" * 100).json()
+    assert body["status"] == "done"
+    assert body["verdict"] == "inconclusive"
+    assert any("could not be analysed" in n for n in body["evidence"]["notes"])

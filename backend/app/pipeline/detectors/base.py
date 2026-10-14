@@ -9,6 +9,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import numpy as np
+
 
 @dataclass
 class Segment:
@@ -24,6 +26,9 @@ class MediaContext:
     mime: str
     # Where the detector may write heatmaps / spectra (storage/artifacts/<analysis id>/)
     out_dir: Path
+    # Decoded sound (16 kHz mono float32), filled in by the runner for audio files.
+    # Decoding once here means every audio check can reuse it.
+    audio: np.ndarray | None = None
 
 
 @dataclass

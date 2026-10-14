@@ -27,3 +27,18 @@ def png_bytes(arr, text: dict | None = None) -> bytes:
         info.add_text(k, v)
     Image.fromarray(arr).save(buf, "PNG", pnginfo=info)
     return buf.getvalue()
+
+
+def wav_bytes(seconds: float = 3.0, freq: float = 220.0, sr: int = 16000, amplitude: float = 0.3) -> bytes:
+    """A simple tone saved as a 16-bit WAV file (no ffmpeg needed to create it)."""
+    import wave
+
+    t = np.arange(int(seconds * sr)) / sr
+    samples = (amplitude * np.sin(2 * np.pi * freq * t) * 32767).astype("<i2")
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(sr)
+        w.writeframes(samples.tobytes())
+    return buf.getvalue()

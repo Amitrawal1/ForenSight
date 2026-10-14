@@ -472,3 +472,25 @@ gradients for all 66 M weights ≈ 260 MB), weight channels by mean gradient, Re
 - Tests: 33 passing. Docker still not tested (user deferred).
 
 **Phase 2 complete.** Next: Phase 3 — audio (anti-spoofing model + splice check + timeline).
+
+### 2026-10-14 — Session 4: Phase 3 plan + Part 3a (audio loading + player)
+**Phase 3 parts**: 3a audio loading + player · 3b voice-clone/AI-speech model per window ·
+3c splice/cut check · 3d fake-segment timeline. Research agent checking audio models (3b).
+
+**3a — what was built**
+- `preprocessing/audio.py`: `load_audio()` runs **ffmpeg** → 16 kHz mono float32 (what speech
+  models expect), first 5 minutes only, 120 s timeout; clear `AudioDecodeError` for broken
+  files / no sound track. Works for video files too (`-vn`), ready for Phase 4.
+  `split_windows()`: 4 s windows every 2 s (overlap), last window aligned to the end if
+  ≥ 1 s left. `is_silent()` (< −45 dB). `waveform_peaks()` → 400 values for drawing.
+- `ffmpeg_exe()`: system ffmpeg (Docker image has it) else the pip package
+  **imageio-ffmpeg** (only for local dev; this Mac has no ffmpeg and we didn't install system
+  software). Tests needing ffmpeg skip if neither exists.
+- `MediaContext.audio`: runner decodes once, every audio check reuses it. Unreadable audio →
+  Inconclusive + note "The audio could not be analysed: …" (no crash).
+- `Outcome.media` → `evidence.media` = `{duration_s, peaks}` for the result page.
+- Frontend `AudioPanel.jsx`: `<audio>` player + SVG waveform (no extra library), click to
+  seek, red playhead line. Shown for audio files.
+- Tests: 41 passing (windows, silence, peaks, 44.1 kHz → 16 kHz decode, broken file, audio
+  upload API, unreadable audio). Checked visually with headless Chrome using a clip made by
+  macOS `say` (synthetic speech — also useful as a fake-voice sample in 3b).
