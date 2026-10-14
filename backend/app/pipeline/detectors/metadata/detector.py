@@ -55,6 +55,7 @@ class Finding:
     reliability: float
     fake_kind: str
     reason: str
+    decisive: bool = False  # written by the AI tool itself -> treat as proof
 
 
 class MetadataDetector(Detector):
@@ -85,18 +86,18 @@ class MetadataDetector(Detector):
         if "compositewithtrainedalgorithmicmedia" in haystack:
             findings.append(Finding(0.9, 0.8, "manipulated",
                                     "Metadata declares the image was edited with generative AI "
-                                    "(IPTC: composite with trained algorithmic media)."))
+                                    "(IPTC: composite with trained algorithmic media).", decisive=True))
         elif "trainedalgorithmicmedia" in haystack:
             findings.append(Finding(0.95, 0.9, "ai_generated",
                                     "Metadata declares the image was created by generative AI "
-                                    "(IPTC: trained algorithmic media)."))
+                                    "(IPTC: trained algorithmic media).", decisive=True))
 
         # 2. Stable Diffusion style PNG parameters
         sd_keys = [k for k in SD_PNG_KEYS if k in png_text]
         if sd_keys:
             findings.append(Finding(0.95, 0.9, "ai_generated",
                                     f"The file contains AI generation settings (PNG field '{sd_keys[0]}'), "
-                                    "as written by Stable Diffusion tools."))
+                                    "as written by Stable Diffusion tools.", decisive=True))
 
         # 3. Named AI tools / editors anywhere in the metadata text
         ai_tool = next((v for k, v in AI_TOOLS.items() if k in haystack), None)
@@ -133,5 +134,6 @@ class MetadataDetector(Detector):
             fake_score=main.fake_score,
             reliability=main.reliability,
             fake_kind=main.fake_kind,
+            decisive=main.decisive,
             reasons=[f.reason for f in sorted(findings, key=lambda f: -f.reliability)] + notes,
         )

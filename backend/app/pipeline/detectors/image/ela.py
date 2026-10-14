@@ -88,8 +88,11 @@ class ElaDetector(Detector):
                        "which can happen when part of an image is pasted in or edited."]
         else:
             score = 0.2
+            # "Found nothing" is weak evidence (the edit may just be invisible to ELA),
+            # so it counts less than a real finding
+            reliability = min(reliability, 0.15)
             reasons = ["Compression error is consistent across the image; no edited region stands out."]
-        if reliability < 0.35:
+        if float(np.median(err_b)) < 0.5:
             reasons.append("The image looks heavily recompressed, so this check is less reliable.")
 
         return DetectorResult(self.name, fake_score=score, reliability=reliability,

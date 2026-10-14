@@ -86,6 +86,9 @@ class FftDetector(Detector):
             reasons = ["No unusual repeating patterns were found in the image's frequency spectrum."]
 
         reliability = 0.15 if ctx.mime == "image/jpeg" else 0.3
+        if n_peaks < 2:
+            # "Found nothing" is weak evidence: many AI images have no visible pattern
+            reliability = 0.1
         return DetectorResult(self.name, fake_score=score, reliability=reliability, fake_kind="ai_generated",
                               reasons=reasons, heatmap=SPECTRUM_NAME)
 

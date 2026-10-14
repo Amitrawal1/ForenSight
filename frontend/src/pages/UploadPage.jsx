@@ -47,7 +47,7 @@ export default function UploadPage() {
       </div>
       {error && <p className="mt-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
       <p className="mt-6 text-xs text-slate-500">
-        Image checks available now: metadata, error level analysis and frequency analysis. Audio and video
+        Image checks available now: AI-image model, metadata, error level analysis and frequency analysis. Audio and video
         analysis are coming in the next phases.
       </p>
     </section>

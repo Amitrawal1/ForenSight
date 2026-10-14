@@ -37,6 +37,9 @@ class DetectorResult:
     # "ai_generated" | "manipulated" — what kind of fake this detector points to
     fake_kind: str = "manipulated"
     reasons: list[str] = field(default_factory=list)
+    # True for proof-like findings, e.g. the AI tool wrote "made by AI" into the file.
+    # A decisive fake finding decides the verdict on its own (see fusion/combiner.py).
+    decisive: bool = False
     # File name inside MediaContext.out_dir
     heatmap: str | None = None
     segments: list[Segment] = field(default_factory=list)

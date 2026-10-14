@@ -4,7 +4,7 @@ Run from the project root (only needs plain Python, no extra packages):
 
     python backend/scripts/download_models.py
 
-Big ML models (Phase 2+) are downloaded automatically the first time they are used.
+Files are checked with a SHA-256 checksum, so a broken or changed download is rejected.
 """
 
 import argparse
@@ -16,11 +16,27 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-# name -> (download url, sha256 checksum to make sure the file is correct)
+# AI-image model: pinned to one exact version (commit) so results never change by surprise
+CF_URL = (
+    "https://huggingface.co/buildborderless/CommunityForensics-DeepfakeDet-ViT/resolve/"
+    "ac6ee457bea904a373065754107451793b56db00"
+)
+
+# file path inside models/ -> (download url, sha256 checksum to make sure the file is correct)
 MODELS = {
+    # Face detector (OpenCV YuNet, 230 KB)
     "face_detection_yunet_2023mar.onnx": (
         "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx",
         "8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4",
+    ),
+    # AI-image detector (Community Forensics ViT, 87 MB, MIT licence)
+    "community_forensics_vit/config.json": (
+        f"{CF_URL}/config.json",
+        "4b425d089842fecf8f25fc52aa44d09f49607ef89a0e2ff685ced6ec1c70e9b1",
+    ),
+    "community_forensics_vit/model.safetensors": (
+        f"{CF_URL}/model.safetensors",
+        "275ba982236ddd6afddf7131f8133e89f537574b964cf8fa5825b4956d741692",
     ),
 }
 
@@ -52,6 +68,7 @@ def main() -> int:
 
     for name, (url, checksum) in MODELS.items():
         dest = out / name
+        dest.parent.mkdir(parents=True, exist_ok=True)
         if dest.is_file() and sha256(dest) == checksum:
             print(f"ok       {name} (already downloaded)")
             continue

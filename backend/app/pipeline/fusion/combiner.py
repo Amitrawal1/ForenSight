@@ -1,7 +1,8 @@
 """Combine independent detector results into one verdict.
 
-Reliability-weighted average of fake scores. Instead of forcing a guess, a middle
-band (or too little reliable evidence) yields "inconclusive".
+1. If a check found proof (decisive=True, e.g. "made by AI" written in the file), use it.
+2. Otherwise take an average of all fake scores, where checks we trust more count more.
+3. Instead of forcing a guess, a middle score (or too little evidence) gives "inconclusive".
 """
 
 from app.pipeline.detectors.base import DetectorResult
@@ -13,6 +14,12 @@ MIN_TOTAL_RELIABILITY = 0.5
 
 def combine(results: list[DetectorResult]) -> tuple[str, float]:
     """Return (verdict, confidence 0..1). Inconclusive always has confidence 0."""
+    # Proof-like findings (e.g. the AI tool labelled the file itself) decide on their own
+    decisive = [r for r in results if r.decisive and r.fake_score > FAKE_ABOVE]
+    if decisive:
+        best = max(decisive, key=lambda r: r.fake_score)
+        return best.fake_kind, best.fake_score
+
     total = sum(r.reliability for r in results)
     if total < MIN_TOTAL_RELIABILITY:
         return "inconclusive", 0.0

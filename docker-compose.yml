@@ -4,7 +4,7 @@ x-backend-common: &backend-common
   build:
     context: ./backend
     args:
-      INSTALL_ML: ${INSTALL_ML:-false}
+      INSTALL_ML: ${INSTALL_ML:-true}
   env_file: .env
   volumes:
     - ./backend:/app

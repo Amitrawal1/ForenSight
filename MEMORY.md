@@ -353,3 +353,49 @@ Subagents may be used. Co-Authored-By lines are still **not** added (global rule
 
 **Next**: 2b — AI-image detector (choice depends on research of pretrained checkpoints and
 whether the user has a Kaggle account for CIFAKE).
+
+### 2026-10-14 — Session 3b: Part 2b (AI-image detector)
+**Model research** (background research agent, then verified live on Hugging Face):
+- **Chosen: `buildborderless/CommunityForensics-DeepfakeDet-ViT`** — re-upload of the
+  Community Forensics model (Owens Lab, CVPR 2025, arXiv 2411.04125). ViT-S/16 @ 384 px,
+  trained on 2.7 M images from ~4,800 generators. MIT licence, 87 MB, ~65 ms/image on CPU
+  (≈6 s first load). Pinned to commit `ac6ee457…`, SHA-256 checked in `download_models.py`.
+  Files saved to `models/community_forensics_vit/` (git-ignored).
+  - Its preprocessor needs transformers ≥ 5.4, so we preprocess ourselves exactly as the
+    model card says: short side → 440 (bicubic), centre crop 384, CLIP mean/std. Output is one
+    logit → sigmoid = AI probability.
+  - Warning: this repo's weights were replaced recently because the earlier upload was wrong —
+    that's why we pin the commit and tested it ourselves.
+- **Dropped CLIP/UnivFD** (was in the build plan): official probe only trained on ProGAN →
+  likely weak on SDXL/Midjourney/Flux, and ViT-L is 1.7 GB.
+- **Dropped CIFAKE** for training: images are 32×32, poor for real photos. **No Kaggle needed.**
+- Face model for 2c (to verify then): DFDC-winning EfficientNet-B7 (selimsef, MIT, 267 MB,
+  ~0.5 s/face CPU). No face model publishes strong cross-dataset results — say so honestly.
+- Grad-CAM: do it by hand with PyTorch hooks (no extra package).
+
+**What was built**
+- `detectors/image/ai_image.py` (`AiImageDetector`, reliability 0.7, kind ai_generated).
+- **Decisive findings** (new `DetectorResult.decisive`): metadata written by the AI tool
+  itself (IPTC trainedAlgorithmicMedia / composite…, Stable Diffusion PNG fields) now decides
+  the verdict alone. Why: a synthetic test image with SD metadata was judged "real" by the
+  model and the two cancelled out to Inconclusive. Nobody adds SD settings to a real photo.
+  AI tool *names* in text are NOT decisive (a human could write "not Midjourney").
+- **"Found nothing" counts less**: ELA with no suspicious region → reliability 0.15; FFT with
+  no peaks → 0.1. Why: otherwise two weak "nothing found" votes dragged a confident model
+  score (AI = 1.0) down to Inconclusive. Absence of evidence ≠ evidence of authenticity.
+- `INSTALL_ML` now defaults to **true** (.env.example + docker-compose) — the main image
+  detector needs PyTorch.
+- Tests: 24 passing (new fixture `tests/fixtures/ai_sd.jpg`, a CC0 DiffusionDB image saved
+  as JPEG so it has no AI metadata). Model tests skip if torch/model missing.
+
+**Evaluation (small, our own — not a benchmark)**
+- Model alone: 20/20 DiffusionDB Stable Diffusion images ≥ 0.96 (still 20/20 after JPEG
+  q80); 8/9 real scikit-image photos ≈ 0.00.
+- Full pipeline, metadata removed: **AI 40/40 → AI-Generated**; **real 14/16 → Likely
+  Authentic**, 2/16 wrong = the Hubble deep-field image (JPEG and PNG). Heavily processed
+  astronomy/scientific images look "AI" to the model — known false positive, mention in demo.
+- Caveat: DiffusionDB is 2022 Stable Diffusion, probably in the model's training data. Still
+  need tests on newer generators (Flux, Midjourney v6+, DALL-E 3, GPT-image) and on phone
+  photos / WhatsApp forwards.
+
+**Next**: 2c — face-swap detector (EfficientNet-B7) + Grad-CAM heatmaps.
