@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getAnalysis } from "../lib/api.js";
+import { deleteAnalysis, getAnalysis, reportUrl } from "../lib/api.js";
 import { goTo } from "../lib/useHashRoute.js";
 import VerdictCard from "../components/VerdictCard.jsx";
 import EvidenceViewer from "../components/EvidenceViewer.jsx";
@@ -60,10 +60,26 @@ export default function AnalysisPage({ id }) {
     );
   }
 
+  async function remove() {
+    if (!window.confirm(`Delete "${analysis.filename}" and its results? This cannot be undone.`)) return;
+    await deleteAnalysis(analysis.id);
+    goTo("/history");
+  }
+
   const ev = analysis.evidence ?? { detectors: [], reasons: [], notes: [] };
   return (
     <div className="space-y-6">
-      {back}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {back}
+        <div className="flex gap-2">
+          <a href={reportUrl(analysis.id)} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">
+            Download PDF report
+          </a>
+          <button onClick={remove} className="rounded-lg border px-4 py-2 text-sm text-slate-600 hover:bg-rose-50 hover:text-rose-700">
+            Delete
+          </button>
+        </div>
+      </div>
       <VerdictCard analysis={analysis} />
       {analysis.media_type === "image" && <EvidenceViewer id={analysis.id} detectors={ev.detectors} />}
       {(analysis.media_type === "audio" || analysis.media_type === "video") && (

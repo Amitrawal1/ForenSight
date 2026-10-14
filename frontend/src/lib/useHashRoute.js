@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-// Tiny hash router: "#/" -> upload, "#/analysis/<id>" -> result.
+// Tiny hash router: "#/" -> upload, "#/analysis/<id>" -> result, "#/history" -> past checks.
 export function useHashRoute() {
   const [hash, setHash] = useState(window.location.hash);
   useEffect(() => {
@@ -9,7 +9,9 @@ export function useHashRoute() {
     return () => window.removeEventListener("hashchange", onChange);
   }, []);
   const m = hash.match(/^#\/analysis\/([\w-]+)$/);
-  return m ? { page: "analysis", id: m[1] } : { page: "upload" };
+  if (m) return { page: "analysis", id: m[1] };
+  if (hash === "#/history") return { page: "history" };
+  return { page: "upload" };
 }
 
 export const goTo = (path) => {

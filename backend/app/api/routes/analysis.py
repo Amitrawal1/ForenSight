@@ -7,11 +7,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.db.models import Analysis
+from app.db.models import Analysis, Status
 from app.db.session import get_db
 from app.pipeline.preprocessing import file_type
 from app.schemas.analysis import AnalysisOut, AnalysisSummary
-from app.services.storage import UploadTooLarge, artifact_dir, delete_files, save_upload
+from app.reports.pdf_report import build_report
+from app.services.storage import UploadTooLarge, artifact_dir, delete_files, report_path, save_upload
 from app.workers.tasks import run_analysis
 
 router = APIRouter(prefix="/analyses", tags=["analysis"])
@@ -81,6 +82,19 @@ def get_artifact(analysis_id: str, name: str, db: Session = Depends(get_db)):
     if not ARTIFACT_NAME.match(name) or not path.is_file():
         raise HTTPException(status_code=404, detail="Artifact not found")
     return FileResponse(path)
+
+
+@router.get("/{analysis_id}/report")
+def get_report(analysis_id: str, db: Session = Depends(get_db)):
+    """Download the PDF report. It is made the first time someone asks for it, then reused."""
+    a = _get_or_404(db, analysis_id)
+    if a.status != Status.done:
+        raise HTTPException(status_code=409, detail="The analysis is not finished yet")
+    path = report_path(a.id)
+    if not path.is_file():
+        build_report(a, artifact_dir(a.id), path)
+    stem = Path(a.filename).stem[:60] or "file"
+    return FileResponse(path, media_type="application/pdf", filename=f"ForenSight-report-{stem}.pdf")
 
 
 @router.delete("/{analysis_id}", status_code=204)

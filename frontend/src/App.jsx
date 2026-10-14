@@ -3,6 +3,7 @@ import { getHealth } from "./lib/api.js";
 import { goTo, useHashRoute } from "./lib/useHashRoute.js";
 import UploadPage from "./pages/UploadPage.jsx";
 import AnalysisPage from "./pages/AnalysisPage.jsx";
+import HistoryPage from "./pages/HistoryPage.jsx";
 
 export default function App() {
   const route = useHashRoute();
@@ -21,11 +22,23 @@ export default function App() {
           <button onClick={() => goTo("/")} className="text-xl font-bold">
             ForenSight
           </button>
-          <span className="text-sm text-slate-500">API: {apiStatus}</span>
+          <nav className="flex items-center gap-4 text-sm">
+            <button onClick={() => goTo("/")} className={route.page === "upload" ? "font-semibold" : "text-slate-600 hover:text-slate-900"}>
+              New check
+            </button>
+            <button onClick={() => goTo("/history")} className={route.page === "history" ? "font-semibold" : "text-slate-600 hover:text-slate-900"}>
+              History
+            </button>
+            <span className={apiStatus === "ok" ? "text-emerald-600" : "text-rose-600"} title={`API: ${apiStatus}`}>
+              ●
+            </span>
+          </nav>
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-4 py-10">
-        {route.page === "analysis" ? <AnalysisPage id={route.id} /> : <UploadPage />}
+        {route.page === "analysis" && <AnalysisPage id={route.id} />}
+        {route.page === "history" && <HistoryPage />}
+        {route.page === "upload" && <UploadPage />}
       </main>
     </div>
   );

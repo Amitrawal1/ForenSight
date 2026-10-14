@@ -105,3 +105,27 @@ def test_video_upload_gives_duration_and_waveform(client, tmp_path):
     assert abs(body["evidence"]["media"]["duration_s"] - 5.0) < 0.2
     assert len(body["evidence"]["media"]["peaks"]) == 400
     assert body["thumbnail_path"] == "thumb.jpg"
+
+
+def test_pdf_report_download_and_delete(client):
+    from app.services.storage import report_path
+
+    aid = upload(client, "report.jpg", jpeg_bytes(photo_like(seed=5))).json()["id"]
+    r = client.get(f"/api/analyses/{aid}/report")
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "application/pdf"
+    assert r.content.startswith(b"%PDF")
+    assert "ForenSight-report-report.pdf" in r.headers["content-disposition"]
+    assert report_path(aid).is_file()
+
+    # Deleting the analysis also deletes its report
+    client.delete(f"/api/analyses/{aid}")
+    assert not report_path(aid).exists()
+    assert client.get(f"/api/analyses/{aid}/report").status_code == 404
+
+
+@pytest.mark.skipif(ffmpeg_exe() is None, reason="ffmpeg not installed")
+def test_pdf_report_for_audio_has_timeline(client):
+    body = upload(client, "voice.wav", wav_bytes(seconds=10.0)).json()
+    r = client.get(f"/api/analyses/{body['id']}/report")
+    assert r.status_code == 200 and r.content.startswith(b"%PDF")

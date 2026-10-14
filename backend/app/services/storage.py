@@ -38,6 +38,12 @@ def artifact_dir(analysis_id: str) -> Path:
     return get_settings().artifact_dir / analysis_id
 
 
+def report_path(analysis_id: str) -> Path:
+    return get_settings().report_dir / f"{analysis_id}.pdf"
+
+
 def delete_files(stored_path: str, analysis_id: str) -> None:
+    """Remove everything we stored for one analysis: upload, generated pictures and report."""
     Path(stored_path).unlink(missing_ok=True)
     shutil.rmtree(artifact_dir(analysis_id), ignore_errors=True)
+    report_path(analysis_id).unlink(missing_ok=True)

@@ -26,3 +26,7 @@ export const getAnalysis = (id) => request(`/api/analyses/${id}`);
 
 export const artifactUrl = (id, name) => `${API_URL}/api/analyses/${id}/artifacts/${name}`;
 export const originalUrl = (id) => `${API_URL}/api/analyses/${id}/original`;
+
+export const listAnalyses = () => request("/api/analyses");
+export const deleteAnalysis = (id) => request(`/api/analyses/${id}`, { method: "DELETE" });
+export const reportUrl = (id) => `${API_URL}/api/analyses/${id}/report`;

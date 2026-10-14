@@ -212,7 +212,7 @@ ForenSight/
 - [x] **Phase 4 — Video** (2026-10-14): frame sampling, per-frame face-swap + AI-image
       checks, sound-track audio checks, video metadata, video player + timeline + worst frame.
       (Lip-sync and blink/head-pose checks not done — stretch goals.)
-- [ ] **Phase 5 — Explanations & PDF report**, history page.
+- [x] **Phase 5 — PDF report, history page, delete** (2026-10-14).
 - [ ] **Phase 6 — Fine-tuning** on datasets, evaluation metrics, demo polish.
 
 ## 11. Open questions
@@ -639,3 +639,26 @@ DFDC strategy). Checked in headless Chrome.
 test videos are much easier than real deepfakes. Speed: ~1 s per face per frame on CPU.
 
 **Next**: Phase 5 — PDF report + history page + delete button.
+
+### 2026-10-14 — Session 6: Phase 5 (PDF report, history, delete)
+- **PDF report** (`app/reports/pdf_report.py`, ReportLab): title + file/date/report ID,
+  coloured verdict box (+ confidence unless inconclusive), "Why", **"What you should do next"**
+  (plain advice per verdict, e.g. call the person back on a number you already trust),
+  Evidence (timeline drawing for audio/video with time axis; heatmap pictures with captions),
+  "Every check" table (fake %, trust %, finding), notes, limitations, page footer.
+- `GET /api/analyses/{id}/report`: made **on first request, then cached** in
+  `storage/reports/<id>.pdf` (409 if not finished). Download name
+  `ForenSight-report-<file>.pdf`. Why on demand: no extra work for files nobody downloads, and
+  the report always uses the current template. `delete_files()` now also deletes the PDF.
+- Bug fixed during visual check: big verdict title overlapped the summary line (paragraph
+  font size 18 with body line height) → own "verdict" style with leading 22.
+- **History page** (`#/history`): thumbnails (icon for audio), file name, type, local time,
+  verdict badge + confidence, Delete with confirmation. Header nav: New check / History /
+  API status dot. Result page: **Download PDF report** + **Delete** buttons.
+- README: "What it checks" table.
+- Checked visually: 3 PDFs (video face swap, audio with TTS part, AI image) rendered to PNG;
+  history + result pages in headless Chrome. Tests: 64 passing.
+
+**Next ideas (Phase 6+)**: Docker run-through (still never tested!), real deepfake datasets
+for evaluation, verify C2PA signatures (c2pa-python), skip faces cut off at the image edge,
+Alembic migrations, auto-delete old uploads, demo script + sample files.

@@ -7,6 +7,21 @@ with heatmaps, timelines and plain-language reasons.
 
 See [`MEMORY.md`](MEMORY.md) for the full design, decisions and history.
 
+## What it checks
+
+| Media | Checks |
+|-------|--------|
+| Images (JPG, PNG, WEBP) | AI-image model (Community Forensics ViT), face-swap model (DFDC EfficientNet-B7), metadata / AI labels / C2PA, error level analysis, frequency analysis |
+| Audio (WAV, MP3, M4A, OGG voice notes) | AI-voice model (XLSR-SLS) per ~4 s window, splice check (background-noise changes) |
+| Video (MP4, MOV, AVI) | Face-swap and AI-image models on sampled frames, all audio checks on the sound track, metadata |
+
+Every result shows **why**: heatmaps (Grad-CAM), a clickable timeline for audio/video,
+plain-language reasons, and a downloadable **PDF report**. Past checks are kept on the
+**History** page and can be deleted.
+
+Model files (~1.7 GB in total) are downloaded once with `backend/scripts/download_models.py`
+and checked with SHA-256.
+
 ## Quick start (Docker)
 
 Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
