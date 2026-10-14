@@ -399,3 +399,54 @@ whether the user has a Kaggle account for CIFAKE).
   photos / WhatsApp forwards.
 
 **Next**: 2c — face-swap detector (EfficientNet-B7) + Grad-CAM heatmaps.
+
+### 2026-10-14 — Session 3c: Part 2c (face-swap detector + Grad-CAM)
+**Model: DFDC challenge winner** (`selimsef/dfdc_deepfake_challenge`, MIT), checkpoint
+`final_111_DeepFakeClassifier_tf_efficientnet_b7_ns_0_36` (267 MB, SHA-256 in
+`download_models.py`, saved as `models/dfdc_efficientnet_b7.pt`). The winner averaged 7
+checkpoints; we use 1 (CPU speed). ~1.1 s per face on CPU after a ~4 s first load.
+- Preprocessing copied from their `kernel_utils.py`: face box + 1/3 of its size on each
+  side → resize longest side to 380 (cubic up / area down) → paste in centre of black
+  380×380 → ImageNet mean/std → EfficientNet-B7 (`timm` `tf_efficientnet_b7.ns_jft_in1k`,
+  forward_features → avg pool → Linear(2560,1)) → sigmoid. Weights load with `strict=True`
+  (all keys match).
+- Our faces come from YuNet, theirs from MTCNN → boxes differ a bit; possible small accuracy loss.
+- **Safe loading**: the checkpoint can't load with `torch.load(weights_only=True)` because it
+  stores one numpy number (`bce_best`). We allow exactly `numpy.core.multiarray.scalar` +
+  dtype via `torch.serialization.safe_globals` — never `weights_only=False` (that would run
+  arbitrary code from the file).
+- Max 3 faces, min 64 px face size; no face → check doesn't apply (returns None).
+- Reliability 0.5 (lower than the AI-image model: face-swap models generalise poorly).
+
+**Grad-CAM** (`explain/gradcam.py`, own code, no package): hook a layer, take
+`torch.autograd.grad(fake_logit, layer_output)` (not `.backward()` — that would store
+gradients for all 66 M weights ≈ 260 MB), weight channels by mean gradient, ReLU, normalise.
+- Face model: layer `encoder.bn2`; heatmap mapped back from the 380 square to the face box;
+  reason names the face part with most heat (eyes/forehead, nose/cheeks, mouth/jaw).
+  Output `faces.png` = heatmap + boxes (red ≥ 50 % fake, green otherwise).
+- AI-image model: layer `vit.encoder.layer[-1].layernorm_before`, tokens → 24×24 grid
+  (drop CLS); placed on the centre crop the model saw. Output `ai_heatmap.png` (only when
+  AI ≥ 50 %).
+
+**Fusion redesigned (important)** — `fusion/combiner.py`:
+- Evidence is scored **per kind of fake** ("ai_generated" vs "manipulated"). Why: a face swap
+  caught at 0.99 was cancelled to Inconclusive by the AI-image model correctly saying
+  "not AI-made". Not-AI-made is no evidence against a swapped face.
+- Each kind's weighted average includes a **neutral 0.5 prior with weight 0.3**, so one weak
+  check alone can't decide (replaces part of the old minimum-reliability rule).
+- Fake if any kind > 0.65 (highest wins). Authentic if total trust ≥ 0.5 and every kind with
+  trust ≥ 0.3 is < 0.35 (a kind seen only by ELA's weak "nothing found" doesn't count as
+  checked). Otherwise Inconclusive. Decisive metadata still wins first.
+- Explanations for a fake verdict now use reasons from checks of the same kind.
+
+**Evaluation (own small tests, not a benchmark)**
+- Face model on 100 real LFW faces (1 photo per person): mean 0.04, **2/100 ≥ 0.5**
+  (3/100 after JPEG q60). AI-image model on the same faces: 0/100 false alarms.
+- 30 crude face swaps (OpenCV seamlessClone of another LFW face): 14/30 caught (0.76–1.0),
+  16 scored < 0.2. Real deepfakes still untested (FF++/Celeb-DF are gated).
+- Full pipeline: Stable Diffusion 10/10 → AI-Generated; skimage real 14/16 → Likely Authentic
+  (2 = Hubble image → AI-Generated, known); LFW real 37/40 → Likely Authentic, 2 Inconclusive,
+  1 Manipulated (the face model's false alarm).
+- Tests: 33 passing (fixture `face.jpg` is now 512×512 so the face is ≥ 64 px).
+
+**Next**: 2d — frontend shows face boxes / AI heatmap / ELA, heatmap picker.

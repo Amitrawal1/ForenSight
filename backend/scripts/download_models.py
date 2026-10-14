@@ -38,6 +38,12 @@ MODELS = {
         f"{CF_URL}/model.safetensors",
         "275ba982236ddd6afddf7131f8133e89f537574b964cf8fa5825b4956d741692",
     ),
+    # Face-swap detector (DFDC challenge winner, EfficientNet-B7, 267 MB, MIT licence)
+    "dfdc_efficientnet_b7.pt": (
+        "https://github.com/selimsef/dfdc_deepfake_challenge/releases/download/0.0.1/"
+        "final_111_DeepFakeClassifier_tf_efficientnet_b7_ns_0_36",
+        "9db77ab9318863e2f8ab287c8eb83c2232584b82dc2fb41f1d614ddd7900cccb",
+    ),
 }
 
 

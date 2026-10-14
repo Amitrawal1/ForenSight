@@ -1,8 +1,14 @@
 """Combine independent detector results into one verdict.
 
 1. If a check found proof (decisive=True, e.g. "made by AI" written in the file), use it.
-2. Otherwise take an average of all fake scores, where checks we trust more count more.
-3. Instead of forcing a guess, a middle score (or too little evidence) gives "inconclusive".
+2. Otherwise score each kind of fake separately:
+     - "ai_generated": the whole image was made by AI
+     - "manipulated":  a real image where something was changed (face swap, edit)
+   Why separately? "Not made by AI" is no evidence against "face was swapped",
+   so these checks must not cancel each other out.
+3. Each kind's score is an average where checks we trust more count more. We also add
+   a neutral 50% "starting guess", so one weak check alone can't decide the verdict.
+4. Instead of forcing a guess, unclear scores (or too little evidence) give "inconclusive".
 """
 
 from app.pipeline.detectors.base import DetectorResult
@@ -10,6 +16,20 @@ from app.pipeline.detectors.base import DetectorResult
 AUTHENTIC_BELOW = 0.35
 FAKE_ABOVE = 0.65
 MIN_TOTAL_RELIABILITY = 0.5
+# Weight of the neutral 50% starting guess in each kind's average
+PRIOR_WEIGHT = 0.3
+# A kind only counts as "checked" if the checks looking at it have at least this much
+# trust together. E.g. ELA saying "found nothing" (trust 0.15) alone is too weak.
+CHECKED_MIN_TRUST = 0.3
+KINDS = ("ai_generated", "manipulated")
+
+
+def kind_score(results: list[DetectorResult], kind: str) -> tuple[float, float]:
+    """Return (fake score 0..1, total trust) for one kind of fake."""
+    same = [r for r in results if r.fake_kind == kind and r.reliability > 0]
+    trust = sum(r.reliability for r in same)
+    score = (sum(r.fake_score * r.reliability for r in same) + 0.5 * PRIOR_WEIGHT) / (trust + PRIOR_WEIGHT)
+    return score, trust
 
 
 def combine(results: list[DetectorResult]) -> tuple[str, float]:
@@ -20,18 +40,17 @@ def combine(results: list[DetectorResult]) -> tuple[str, float]:
         best = max(decisive, key=lambda r: r.fake_score)
         return best.fake_kind, best.fake_score
 
-    total = sum(r.reliability for r in results)
-    if total < MIN_TOTAL_RELIABILITY:
-        return "inconclusive", 0.0
+    scores = {kind: kind_score(results, kind) for kind in KINDS}
 
-    score = sum(r.fake_score * r.reliability for r in results) / total
-
-    if score < AUTHENTIC_BELOW:
-        return "likely_authentic", 1 - score
+    # Fake: the strongest kind above the line wins
+    kind, (score, _) = max(scores.items(), key=lambda item: item[1][0])
     if score > FAKE_ABOVE:
-        fired = [r for r in results if r.fake_score > FAKE_ABOVE]
-        ai_weight = sum(r.reliability for r in fired if r.fake_kind == "ai_generated")
-        manip_weight = sum(r.reliability for r in fired if r.fake_kind == "manipulated")
-        verdict = "ai_generated" if ai_weight > manip_weight else "manipulated"
-        return verdict, score
+        return kind, score
+
+    # Authentic: enough evidence overall, and every kind that was properly checked looks clean
+    checked = [s for s, trust in scores.values() if trust >= CHECKED_MIN_TRUST]
+    total_trust = sum(trust for _, trust in scores.values())
+    if checked and total_trust >= MIN_TOTAL_RELIABILITY and max(checked) < AUTHENTIC_BELOW:
+        return "likely_authentic", 1 - max(checked)
+
     return "inconclusive", 0.0

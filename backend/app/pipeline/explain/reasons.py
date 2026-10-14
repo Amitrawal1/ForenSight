@@ -18,7 +18,8 @@ TOP_N = 3
 def explain(verdict: str, results: list[DetectorResult]) -> tuple[str, list[str]]:
     """Return (summary sentence, top reasons supporting the verdict)."""
     if verdict in ("ai_generated", "manipulated"):
-        relevant = [r for r in results if r.fake_score > 0.5]
+        # Explain with the checks that found this kind of fake
+        relevant = [r for r in results if r.fake_score > 0.5 and r.fake_kind == verdict]
     elif verdict == "likely_authentic":
         relevant = [r for r in results if r.fake_score < 0.5]
     else:

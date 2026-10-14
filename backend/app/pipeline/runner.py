@@ -7,6 +7,7 @@ from pathlib import Path
 from app.pipeline.detectors.base import Detector, DetectorResult, MediaContext
 from app.pipeline.detectors.image.ai_image import AiImageDetector
 from app.pipeline.detectors.image.ela import ElaDetector
+from app.pipeline.detectors.image.face_swap import FaceSwapDetector
 from app.pipeline.detectors.image.fft import FftDetector
 from app.pipeline.detectors.metadata.detector import MetadataDetector
 from app.pipeline.explain.reasons import explain
@@ -16,7 +17,13 @@ from app.pipeline.preprocessing.thumbnail import make_image_thumbnail
 
 log = logging.getLogger(__name__)
 
-DETECTORS: list[Detector] = [MetadataDetector(), AiImageDetector(), ElaDetector(), FftDetector()]
+DETECTORS: list[Detector] = [
+    MetadataDetector(),
+    AiImageDetector(),
+    FaceSwapDetector(),
+    ElaDetector(),
+    FftDetector(),
+]
 
 NOT_YET_SUPPORTED = {
     "video": "Video analysis is not available yet (planned for Phase 4).",
