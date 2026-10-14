@@ -4,6 +4,7 @@ import logging
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+from app.pipeline.detectors.audio.splice import SpliceDetector
 from app.pipeline.detectors.base import Detector, DetectorResult, MediaContext
 from app.pipeline.detectors.image.ai_image import AiImageDetector
 from app.pipeline.detectors.image.ela import ElaDetector
@@ -24,6 +25,7 @@ DETECTORS: list[Detector] = [
     FaceSwapDetector(),
     ElaDetector(),
     FftDetector(),
+    SpliceDetector(),
 ]
 
 NOT_YET_SUPPORTED = {

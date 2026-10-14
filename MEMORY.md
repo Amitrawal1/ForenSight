@@ -494,3 +494,49 @@ gradients for all 66 M weights ≈ 260 MB), weight channels by mean gradient, Re
 - Tests: 41 passing (windows, silence, peaks, 44.1 kHz → 16 kHz decode, broken file, audio
   upload API, unreadable audio). Checked visually with headless Chrome using a clip made by
   macOS `say` (synthetic speech — also useful as a fake-voice sample in 3b).
+
+### 2026-10-14 — Session 4b: Part 3c (audio splice check) — done before 3b
+Order swapped: research for 3b was still running, and 3c needs no model.
+
+**`detectors/audio/splice.py`** (`SpliceDetector`, kind manipulated, reliability 0.3; "nothing
+found" → 0.2 / 0.15). Idea: every recording has its own background sound, heard in pauses;
+a join makes it change suddenly.
+- 32 ms frames → power spectrum (bands up to ~6 kHz, dB). Every 0.5 s compare the background
+  of 3 s before vs 3 s after. Background = median spectrum of **real pauses**: quietest 10 %
+  of frames that are also ≥ 15 dB below the **90th-percentile** (speech) level; need ≥ 6.
+- Compare the **shape** only (each spectrum minus its own mean), so a louder speaker / volume
+  change is ignored. Join if change ≥ 3.5 dB and ≥ 2.5 × the file's calm level
+  (25th percentile of changes). Nearby hits merged. Needs ≥ 9 s of audio.
+- Output: reason with times ("changes suddenly at 0:06"), timeline `segments` (±0.5 s).
+
+**How we got there (bugs found by testing, keep for the write-up)**
+1. Quiet frames picked from the whole file → after a join to louder noise, all "quiet"
+   frames were on one side → nothing to compare. Fix: pick pauses per side.
+2. "Quietest 30 %" were still speech (TTS has few pauses) → compared voices, and a louder
+   voice looked like a join. Fix: quietest 10 % and clearly below speech level.
+3. Baseline = median change → in short clips most comparisons cross the join, so the join
+   didn't stand out. Fix: calm quarter (25th percentile).
+4. Absolute level changes overlapped (join 7–8 dB vs louder voice ~5.5 dB). Fix: compare
+   shape only → join 5.4–5.9 vs louder ≤ 2.0 vs same ≤ 1.8.
+5. Pause reference = median loudness failed for speech with many pauses. Fix: 90th pct.
+
+**Evaluation (synthetic only)**: macOS `say` voices (Samantha, Daniel, Karen) + background
+noise. Joins (white −45 dB → low rumble −35 dB): **3/3 found at the right time (6.0 s vs
+5.8–6.1 s)**. Controls: same noise 0/3, louder voice 0/3. Missed (by design): same noise
++3 dB level step only. Not yet tested on real recordings.
+Tests: 5 new (`test_splice.py`, synthetic "speech" bursts, no `say` needed) → 46 passing.
+
+**3b research (research agent, live-checked on HF/GitHub; nothing run yet)**
+- AASIST (clovaai): great in-domain but **In-the-Wild EER 43 %** → don't use.
+- **Best permissive option: `SpeechAntiSpoofingBenchmarks/XLSR-SLS`** (MIT, XLS-R 300M + SLS,
+  trained ASVspoof2019 LA): **In-the-Wild EER 7.46 %**, ASVspoof2021 DF 3.93 %. ONNX file
+  `xlsr-sls.onnx` 1.36 GB (pinned sha `6b99ebc9…`, file sha256 `0aa36298…`). Input exactly
+  64,600 samples (4.04 s), raw waveform; output index 1 = **bona fide** (invert!). Python
+  code files mentioned in its README are missing → ONNX via onnxruntime is the only route.
+- Fallback: `Gustking/wav2vec2-large-xlsr-deepfake-audio-classification` (Apache-2.0, 1.26 GB,
+  plain transformers, 0=real 1=fake, ASVspoof2019 EER 4.01 %, no cross-dataset result).
+- Community wav2vec2-base models (MelodyMachine, mo-thecreator…): unknown/Kaggle data,
+  likely overfit. Label order differs per model — always read `id2label`.
+- Better models exist but are **non-commercial** (DF_Arena 500M, nii-yamagishilab, Spectra).
+- Known pitfall: models trained on ASVspoof often call compressed/phone audio, silence or
+  music "fake" → skip silent windows, calibrate on our own real clips.
