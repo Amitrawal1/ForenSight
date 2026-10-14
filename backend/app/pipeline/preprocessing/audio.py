@@ -70,9 +70,9 @@ def load_audio(path: Path) -> np.ndarray:
     return audio.copy()
 
 
-def split_windows(audio: np.ndarray) -> list[Window]:
-    """Cut audio into overlapping 4-second windows so each part gets its own score."""
-    win, hop = int(WINDOW_S * SAMPLE_RATE), int(HOP_S * SAMPLE_RATE)
+def split_windows(audio: np.ndarray, window_s: float = WINDOW_S, hop_s: float = HOP_S) -> list[Window]:
+    """Cut audio into overlapping windows (default 4 s, every 2 s) so each part gets its own score."""
+    win, hop = int(window_s * SAMPLE_RATE), int(hop_s * SAMPLE_RATE)
     total = len(audio)
     if total < MIN_LAST_WINDOW_S * SAMPLE_RATE:
         return []

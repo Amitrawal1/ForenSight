@@ -39,7 +39,7 @@ def create_analysis(file: UploadFile = File(...), db: Session = Depends(get_db))
         path.unlink(missing_ok=True)
         raise HTTPException(
             status_code=415,
-            detail="Unsupported file type. Use JPG, PNG, WEBP, MP4, MOV, AVI, WAV, MP3 or M4A.",
+            detail="Unsupported file type. Use JPG, PNG, WEBP, MP4, MOV, AVI, WAV, MP3, M4A or OGG/OPUS.",
         )
     media_type, mime = detected
 

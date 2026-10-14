@@ -207,7 +207,8 @@ ForenSight/
       Celery task, metadata + ELA + FFT detectors, fusion, explanations, upload + result pages.
 - [x] **Phase 2 — Pretrained image models** (2026-10-14): Community Forensics AI-image ViT,
       DFDC face-swap EfficientNet-B7, Grad-CAM heatmaps, per-kind fusion, result-page tabs.
-- [ ] **Phase 3 — Audio**: spectrogram anti-spoofing model + segment timeline.
+- [x] **Phase 3 — Audio** (2026-10-14): XLSR-SLS AI-voice model per window, splice check,
+      timeline, OGG voice notes.
 - [ ] **Phase 4 — Video**: frame sampling, face crops, temporal checks, lip-sync.
 - [ ] **Phase 5 — Explanations & PDF report**, history page.
 - [ ] **Phase 6 — Fine-tuning** on datasets, evaluation metrics, demo polish.
@@ -540,3 +541,57 @@ Tests: 5 new (`test_splice.py`, synthetic "speech" bursts, no `say` needed) → 
 - Better models exist but are **non-commercial** (DF_Arena 500M, nii-yamagishilab, Spectra).
 - Known pitfall: models trained on ASVspoof often call compressed/phone audio, silence or
   music "fake" → skip silent windows, calibrate on our own real clips.
+
+### 2026-10-14 — Session 4c: Parts 3b + 3d (AI-voice model + timeline) and OGG support
+User asked for bigger chunks per commit ("update more features then give commit msg").
+
+**Model: `SpeechAntiSpoofingBenchmarks/XLSR-SLS`** (MIT; XLS-R 300M + SLS head, ACM MM 2024,
+trained ASVspoof2019 LA; In-the-Wild EER 7.46 % per the benchmark). ONNX file
+`models/xlsr_sls/xlsr-sls.onnx` (1.36 GB, pinned commit `6b99ebc9…`, SHA-256 checked) run with
+**onnxruntime** (added to `requirements-ml.txt`). Input `wav` [batch, 64600] raw float
+waveform, output `logits` [batch, 2] = **log-softmax, index 1 = bona fide** → fake = 1 − exp(out[1]).
+Short audio is repeated (tiled) to 64,600 samples like the original ASVspoof code.
+~0.8–1.1 s per window on this Mac's CPU; ≤ 40 windows per file (long files sampled sparser).
+Silent windows skipped.
+
+**Evaluation that shaped the design** (40 real LibriSpeech clips from
+`hf-internal-testing/librispeech_asr_dummy` + 11 macOS `say` voices; also MP3 32 kbps and
+8 kHz "phone" versions). Model output is almost binary (0 or 1 per window).
+- TTS: 10/11 clips fully "fake", also after MP3/phone. One voice (score 0.15) missed.
+- Real clean: worst-window ≥ 0.5 in 6/40 clips; **real MP3 14/40, real phone 16/40** →
+  compression makes real voices look fake (the known ASVspoof pitfall).
+- Real compressed false alarms looked *exactly* like TTS (all windows fake), often in short
+  clips → no threshold separates them.
+
+**Rules chosen (and why)**
+- Clip score = **average** of windows, not the worst window (isolated fake windows are common
+  on compressed real speech).
+- **Trust 0.6** normally; **0.12** if the file is lossy (MP3/M4A/OGG), phone quality (almost no
+  energy > 4 kHz), or < 3 windows (~8 s). 0.12 is too low to reach "AI-Generated" alone
+  (with the 0.3 prior a single check needs trust > 0.13). The reason text says so.
+- Kind: ≥ 60 % fake windows → ai_generated; some fake parts → manipulated (AI speech mixed
+  into a real recording). For manipulated, if the longest run of fake windows is
+  **≥ 4 in a row (~10 s)**, score = mean of that run (otherwise the real parts average it away).
+  Runs of 2 or 3 caused false "Manipulated" on real clean speech in simulation (2 and 1
+  clips); real speech never had 4 in a row.
+- Simulated result: real clean 12/40 Likely Authentic, 28 Inconclusive, **0 false
+  accusations**; all compressed (real and TTS) → Inconclusive; clean TTS ≥ 8 s → AI-Generated.
+- **Main known limitation: compressed fakes (e.g. a cloned WhatsApp voice note) are not
+  caught by the model alone** — verdict is Inconclusive with the model's opinion shown.
+  Future: a model trained with compression/codec augmentation, or fine-tune on such data.
+
+**Splice check change**: on lossy files trust 0.15 (Opus-compressed TTS gave a false join).
+
+**OGG/Opus support** (`audio/ogg`): WhatsApp/Telegram voice notes — the main scam case.
+Upload accept list, error message and upload page updated.
+
+**3d timeline** (`AudioPanel.jsx`): one row per check with segments, coloured by fake score
+(green ≤ 35 %, yellow, orange ≥ 50 %, red ≥ 65 %), tooltip per window, shared red playhead,
+click anywhere to seek, legend.
+
+**End-to-end check (local app + headless Chrome)**: long TTS → AI-Generated 83 %; long real
+speech → Likely Authentic; real speech with a TTS sentence inserted → **Manipulated 77 %**
+(voice row red exactly at 0:12–0:24, splice at 0:16); TTS as OGG voice note → Inconclusive.
+Tests: 56 passing.
+
+**Next**: Phase 4 — video (frames → face/AI-image checks per second + sound track → timeline).

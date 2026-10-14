@@ -85,3 +85,11 @@ def test_unreadable_audio_is_inconclusive_with_note(client):
     assert body["status"] == "done"
     assert body["verdict"] == "inconclusive"
     assert any("could not be analysed" in n for n in body["evidence"]["notes"])
+
+
+def test_ogg_voice_note_type_is_accepted(tmp_path):
+    from app.pipeline.preprocessing.file_type import detect
+
+    p = tmp_path / "note.opus"
+    p.write_bytes(b"OggS" + b"\x00" * 60)
+    assert detect(p) == ("audio", "audio/ogg")

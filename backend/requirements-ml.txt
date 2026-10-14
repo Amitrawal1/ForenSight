@@ -1,3 +1,4 @@
 # Installed only when INSTALL_ML=true (torch itself is installed from the CPU wheel index in the Dockerfile)
 transformers==4.47.1
+onnxruntime==1.20.1
 timm==1.0.12

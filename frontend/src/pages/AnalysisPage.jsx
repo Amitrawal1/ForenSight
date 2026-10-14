@@ -66,7 +66,7 @@ export default function AnalysisPage({ id }) {
       {back}
       <VerdictCard analysis={analysis} />
       {analysis.media_type === "image" && <EvidenceViewer id={analysis.id} detectors={ev.detectors} />}
-      {analysis.media_type === "audio" && <AudioPanel id={analysis.id} media={ev.media} />}
+      {analysis.media_type === "audio" && <AudioPanel id={analysis.id} media={ev.media} detectors={ev.detectors} />}
       {ev.notes?.length > 0 && (
         <ul className="space-y-1 text-sm text-slate-600">
           {ev.notes.map((n) => (

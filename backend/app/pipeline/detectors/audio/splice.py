@@ -29,6 +29,10 @@ MIN_CHANGE_DB = 3.5  # background shape must change by at least this much on ave
 TIMES_USUAL = 2.5  # ...and be this many times bigger than the file's calm parts
 DIGITAL_SILENCE_DB = -90.0  # perfect silence has no background to compare
 RELIABILITY = 0.3  # a simple check: natural noise changes (a car passing) can fool it
+# Compression (MP3, voice notes) changes the quiet parts between words, which can look
+# like a join. In our tests it caused a false alarm, so trust it less there.
+LOSSY_MIMES = {"audio/mpeg", "audio/mp4", "audio/ogg"}
+LOSSY_RELIABILITY = 0.15
 
 
 def frame_spectra(audio: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -127,9 +131,13 @@ class SpliceDetector(Detector):
         biggest = max(c for _, c in joins)
         score = min(0.95, 0.6 + 0.02 * biggest)
         places = ", ".join(mmss(t) for t, _ in joins[:3])
+        reasons = [f"The background sound changes suddenly at {places}, which can mean different "
+                   "recordings were joined together."]
+        lossy = ctx.mime in LOSSY_MIMES
+        if lossy:
+            reasons.append("The file is compressed, which can also cause such changes, so this counts less.")
         return DetectorResult(
-            self.name, fake_score=score, reliability=RELIABILITY, fake_kind="manipulated",
-            reasons=[f"The background sound changes suddenly at {places}, which can mean different "
-                     "recordings were joined together."],
+            self.name, fake_score=score, reliability=LOSSY_RELIABILITY if lossy else RELIABILITY,
+            fake_kind="manipulated", reasons=reasons,
             segments=[Segment(max(0.0, t - 0.5), t + 0.5, score) for t, _ in joins],
         )

@@ -14,6 +14,7 @@ ALLOWED = {
     "audio/x-wav": "audio",
     "audio/mpeg": "audio",
     "audio/mp4": "audio",  # m4a
+    "audio/ogg": "audio",  # WhatsApp / Telegram voice notes (Opus)
 }
 
 

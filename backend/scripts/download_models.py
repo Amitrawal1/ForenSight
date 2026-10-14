@@ -44,6 +44,12 @@ MODELS = {
         "final_111_DeepFakeClassifier_tf_efficientnet_b7_ns_0_36",
         "9db77ab9318863e2f8ab287c8eb83c2232584b82dc2fb41f1d614ddd7900cccb",
     ),
+    # AI-voice detector (XLSR-SLS, ONNX, 1.36 GB, MIT licence), pinned version
+    "xlsr_sls/xlsr-sls.onnx": (
+        "https://huggingface.co/SpeechAntiSpoofingBenchmarks/XLSR-SLS/resolve/"
+        "6b99ebc9d9240571c4fe21b364d49845ce9b6bd9/xlsr-sls.onnx",
+        "0aa36298a1a893bfb58a8d721dd30d046157f559da1165f95d2a0b69988c1bbd",
+    ),
 }
 
 
