@@ -205,7 +205,8 @@ ForenSight/
 - [x] **Phase 0 — Skeleton**: folder structure, Docker compose, health endpoint, memory file.
 - [x] **Phase 1 — Upload → result loop with heuristics only** (2026-10-14): upload API, DB row,
       Celery task, metadata + ELA + FFT detectors, fusion, explanations, upload + result pages.
-- [ ] **Phase 2 — Pretrained image model** (HF checkpoint) + Grad-CAM heatmap.
+- [x] **Phase 2 — Pretrained image models** (2026-10-14): Community Forensics AI-image ViT,
+      DFDC face-swap EfficientNet-B7, Grad-CAM heatmaps, per-kind fusion, result-page tabs.
 - [ ] **Phase 3 — Audio**: spectrogram anti-spoofing model + segment timeline.
 - [ ] **Phase 4 — Video**: frame sampling, face crops, temporal checks, lip-sync.
 - [ ] **Phase 5 — Explanations & PDF report**, history page.
@@ -450,3 +451,24 @@ gradients for all 66 M weights ≈ 260 MB), weight channels by mean gradient, Re
 - Tests: 33 passing (fixture `face.jpg` is now 512×512 so the face is ≥ 64 px).
 
 **Next**: 2d — frontend shows face boxes / AI heatmap / ELA, heatmap picker.
+
+### 2026-10-14 — Session 3d: Part 2d (result page for the new checks)
+- `EvidenceViewer.jsx`: tabs **Original / AI focus / Faces / Edited areas**, each with a
+  one-line plain explanation and a "heatmap strength" slider. Default tab = the most trusted
+  check that leans fake, else Faces, else first. Frequency spectrum stays in its own panel
+  (it is not an overlay). Heatmap PNGs are full images (photo + colours), so fading them
+  reveals the original underneath.
+- `DetectorList.jsx`: sorted by trust; coloured fake-score bar (green ≤ 35 %, amber, red
+  ≥ 65 %), "X% fake · trust Y%", "info only" for reliability 0, footnote explaining "trust".
+- ELA now saves `ela.png` **only when it finds a suspicious region** — otherwise the UI
+  showed an "Edited areas" tab for clean images, which implied edits.
+- Verified visually for the first time: ran the API locally (uvicorn, SQLite, eager Celery)
+  + Vite dev server, uploaded files, screenshotted with headless Chrome. Checked a
+  Manipulated result (crude face swap, face 99 %) and an AI-Generated result (DiffusionDB PNG).
+- Observed: a real face **cut off at the image edge** was also flagged red (face model
+  false alarm on partial faces). Idea for later: skip or down-weight faces touching the border.
+- Only the first reason of each check appears under "Why" (top 3 overall); extra faces'
+  reasons are in the per-check evidence list.
+- Tests: 33 passing. Docker still not tested (user deferred).
+
+**Phase 2 complete.** Next: Phase 3 — audio (anti-spoofing model + splice check + timeline).

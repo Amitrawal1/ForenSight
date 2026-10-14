@@ -78,10 +78,12 @@ class ElaDetector(Detector):
         # Images saved many times (e.g. WhatsApp forwards) barely change, so trust this check less
         reliability = 0.35 if float(np.median(err_b)) >= 0.5 else 0.15
 
-        save_overlay(rgb, z / (2 * OUTLIER_Z), ctx.out_dir / HEATMAP_NAME)
-
         # A group of odd squares (but not half the image) suggests an edited region
+        heatmap = None
         if cluster >= MIN_CLUSTER_BLOCKS and fraction < 0.5:
+            # Only save a heatmap when there is something to show
+            save_overlay(rgb, z / (2 * OUTLIER_Z), ctx.out_dir / HEATMAP_NAME)
+            heatmap = HEATMAP_NAME
             score = 0.5 + 0.5 * min(1.0, cluster / 30)
             where = region_name(cy * BLOCK, cx * BLOCK, h, w)
             reasons = [f"A region in the {where} of the image recompresses differently from the rest, "
@@ -96,7 +98,7 @@ class ElaDetector(Detector):
             reasons.append("The image looks heavily recompressed, so this check is less reliable.")
 
         return DetectorResult(self.name, fake_score=score, reliability=reliability,
-                              fake_kind="manipulated", reasons=reasons, heatmap=HEATMAP_NAME)
+                              fake_kind="manipulated", reasons=reasons, heatmap=heatmap)
 
 
 def _block_mean(a: np.ndarray, bh: int, bw: int) -> np.ndarray:

@@ -26,10 +26,12 @@ def test_jpeg_upload_runs_pipeline(client):
     assert {"metadata", "ela", "fft"} <= names
     assert body["evidence"]["summary"]
 
-    # thumbnail + heatmap are served
+    # thumbnail and every heatmap a check produced are served
     aid = body["id"]
     assert client.get(f"/api/analyses/{aid}/artifacts/thumb.jpg").status_code == 200
-    assert client.get(f"/api/analyses/{aid}/artifacts/ela.png").status_code == 200
+    for d in body["evidence"]["detectors"]:
+        if d["heatmap"]:
+            assert client.get(f"/api/analyses/{aid}/artifacts/{d['heatmap']}").status_code == 200
     assert client.get(f"/api/analyses/{aid}/original").status_code == 200
 
 
