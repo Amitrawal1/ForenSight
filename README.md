@@ -13,6 +13,7 @@ Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
 
 ```bash
 cp .env.example .env
+python3 backend/scripts/download_models.py   # small model files -> models/
 docker compose up --build
 ```
 

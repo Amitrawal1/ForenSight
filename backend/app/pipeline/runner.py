@@ -10,6 +10,7 @@ from app.pipeline.detectors.image.fft import FftDetector
 from app.pipeline.detectors.metadata.detector import MetadataDetector
 from app.pipeline.explain.reasons import explain
 from app.pipeline.fusion.combiner import combine
+from app.pipeline.models.registry import ModelNotAvailable
 from app.pipeline.preprocessing.thumbnail import make_image_thumbnail
 
 log = logging.getLogger(__name__)
@@ -47,6 +48,11 @@ def analyse(path: Path, media_type: str, mime: str, out_dir: Path) -> Outcome:
             continue
         try:
             res = det.run(ctx)
+        except ModelNotAvailable as e:
+            # Model not installed yet: skip this check and tell the user why
+            log.warning("detector %s skipped: %s", det.name, e)
+            notes.append(f"The {det.label.lower()} check was skipped: {e}")
+            continue
         except Exception:
             # One broken check must not sink the whole analysis
             log.exception("detector %s failed", det.name)

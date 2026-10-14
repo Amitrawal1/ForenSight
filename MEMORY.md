@@ -316,3 +316,40 @@ with Grad-CAM; replace hand-set thresholds once data is available.
   Rule added to CLAUDE.md (#7). Rewrote comments in `ela.py`, `fft.py`, `heatmap.py` in
   plain English (no unexplained jargon like MAD / z-score / residual). No logic changed;
   15 tests still pass.
+
+### 2026-10-14 — Session 2c: Docker testing deferred
+- User chose to **skip Docker setup/testing for now** and do it later. Phase 1 is still
+  only verified locally (pytest on SQLite + `vite build`). Run the Docker checks before the demo.
+
+### 2026-10-14 — Session 3: Phase 2 plan + Part 2a (ML foundation)
+**New workflow (user request)**: work in parts; after each important part Claude stops,
+gives a one-line commit message, and waits for "ok continue". Rule #8 in CLAUDE.md.
+Subagents may be used. Co-Authored-By lines are still **not** added (global rule unchanged).
+
+**Phase 2 parts**: 2a ML foundation · 2b AI-image detector (+ training notebook) ·
+2c face-swap detector + Grad-CAM · 2d frontend updates.
+
+**2a — what was built**
+- `pipeline/models/registry.py`: `load_cached()` keeps each model in memory per worker
+  process (loading is slow); `model_path()` finds a file in `models/`; `ModelNotAvailable`
+  exception; `require_torch()`.
+- Runner: a detector raising `ModelNotAvailable` is **skipped with a note** shown to the
+  user (e.g. "check was skipped: model file … is missing") instead of failing.
+- `preprocessing/faces.py`: face detection with OpenCV **YuNet**
+  (`face_detection_yunet_2023mar.onnx`, 230 KB, CPU, no PyTorch). Big images are shrunk to
+  1280 px for speed; `crop_face()` adds a 30 % margin because deepfake traces sit at the
+  face edges (jaw, hairline).
+- **Why YuNet, not facenet-pytorch (MTCNN)**: facenet-pytorch 2.6 pins old torch, numpy <2
+  and Pillow <10.3, which clash with our versions. Removed facenet-pytorch and grad-cam from
+  `requirements-ml.txt` (Grad-CAM will be ~30 lines with PyTorch hooks).
+- `backend/scripts/download_models.py`: plain-Python downloader with SHA-256 check, run from
+  the project root: `python3 backend/scripts/download_models.py`. Uses `certifi` when
+  installed because python.org Python on macOS hit `CERTIFICATE_VERIFY_FAILED`; prints the fix
+  otherwise. SSL verification is never disabled. Model files are git-ignored.
+  Docker note: `/models` is mounted read-only, so download on the host.
+- Tests: 19 passing (face found in `tests/fixtures/face.jpg` — public-domain NASA
+  "astronaut" photo from scikit-image; no face in a plain image; missing model → skipped
+  with note). `tests/conftest.py` points `MODELS_DIR` at the project `models/` folder.
+
+**Next**: 2b — AI-image detector (choice depends on research of pretrained checkpoints and
+whether the user has a Kaggle account for CIFAKE).

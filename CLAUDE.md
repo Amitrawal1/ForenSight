@@ -12,3 +12,5 @@
 7. **Comments must be simple and basic** — short plain-English sentences that any developer
    can understand. Explain what a block does and why; explain technical terms (e.g. "z-score",
    "FFT") in a few words the first time they appear in a file.
+8. **Work in parts.** After each important part: stop, give a one-line git commit message,
+   and wait for the user to say "ok continue" before starting the next part.
