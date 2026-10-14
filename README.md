@@ -27,12 +27,13 @@ and checked with SHA-256.
 
 ## Quick start (Docker)
 
-Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) running, with
+**≥ 6 GB memory** (Settings → Resources) and **~10 GB free disk**.
 
 ```bash
-cp .env.example .env
-python3 backend/scripts/download_models.py   # small model files -> models/
-docker compose up --build
+cp .env.example .env                         # 1. settings (change the passwords for real use)
+python3 backend/scripts/download_models.py   # 2. model files -> models/ (~1.7 GB, once)
+docker compose up --build                    # 3. build + start (first build: 10-20 min)
 ```
 
 | What        | URL                          |
@@ -40,6 +41,25 @@ docker compose up --build
 | Web UI      | http://localhost:5173        |
 | API docs    | http://localhost:8000/docs   |
 | Health      | http://localhost:8000/api/health |
+
+Check that everything works (in a second terminal, while the app runs):
+
+```bash
+python3 demo/make_demo_files.py   # demo files (once; see demo/README.md)
+python3 demo/smoke_test.py        # uploads all demo files, compares with expected results
+docker compose run --rm backend pytest   # unit + API tests inside the container
+```
+
+### Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| A check says "skipped: model file … is missing" | Run step 2, then `docker compose restart worker` |
+| Result stays "Waiting in queue" | `docker compose logs -f worker` — the worker may still be loading models or out of memory |
+| Worker exits with code 137 | Out of memory: give Docker more memory (≥ 6 GB) |
+| `download_models.py` fails with an SSL error | Run "Install Certificates.command" in your Python folder, or `pip install certifi` |
+| Port 3306/5173/8000 already in use | Stop the other program, or change the port on the left side in `docker-compose.yml` |
+| Start from a clean database | `docker compose down -v` (deletes all saved analyses) |
 
 ML / training environment (Jupyter):
 

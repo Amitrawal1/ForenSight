@@ -25,7 +25,8 @@ services:
 
   worker:
     <<: *backend-common
-    command: celery -A app.core.celery_app worker --loglevel=info --concurrency=2
+    # One job at a time: each worker process loads all models (~2.5 GB RAM)
+    command: celery -A app.core.celery_app worker --loglevel=info --concurrency=1
 
   frontend:
     build: ./frontend

@@ -695,3 +695,31 @@ judge Q&A with honest numbers, "what it misses", backup plan.
 Final demo results: 10/12 as intended (see demo/README.md). Tests: 66 passing (new:
 letterbox trim, strong-doubt fusion rule). Remaining pytest warnings come from starlette,
 reportlab and torch (third-party), not our code.
+
+### 2026-10-14 — Session 8: Docker preparation (Docker Desktop still NOT installed)
+User asked to "do the Docker part". Docker is not installed on this Mac (needs the user:
+admin password + GUI). Disk: only ~23 GB free (89 % full) — tight but OK (~6–8 GB needed).
+Reviewed the setup without Docker and fixed what would have broken or been wasteful:
+- **Checked every pinned wheel exists for Linux arm64 + Python 3.11** (Apple-Silicon Docker
+  runs linux/arm64): torch 2.14.1+cpu, torchvision 0.29.1+cpu, onnxruntime, numpy 2.1.3,
+  opencv-headless 4.10 (abi3) — all OK.
+- Backend image: **removed librosa + soundfile** (never imported; librosa pulls numba, scipy,
+  scikit-learn) and libsndfile1; **pinned torch==2.14.1 + torchvision==0.29.1** (the versions
+  our tests ran with; torchvision is a timm dependency; torchaudio dropped). onnxruntime pin
+  1.20.1 → **1.31.0** (tested version). Dockerfile `INSTALL_ML` default now true (matches compose).
+- **Worker concurrency 2 → 1**: each worker process loads all models (~2.5–3 GB RAM: ViT,
+  B7 + Grad-CAM, XLSR ONNX 1.36 GB). Two processes could exceed Docker's default memory.
+- **`ml` image would have failed to build**: `facenet-pytorch` pins numpy < 2 → removed;
+  same torch pins; added onnxruntime.
+- Frontend: added **`package-lock.json`** and `npm ci` (reproducible). Verified the lockfile
+  contains the Alpine/musl arm64 native packages (rollup, @tailwindcss/oxide, lightningcss).
+- MySQL: our code had only run on SQLite → compiled the `CREATE TABLE` for MySQL (ENUMs, JSON,
+  DATETIME DEFAULT now()) — valid for MySQL 8.4. Not executed against a real server yet.
+- New **`demo/smoke_test.py`** (stdlib only): uploads all demo files through the API, polls,
+  compares with expected verdicts, downloads a PDF. Locally (uvicorn + SQLite): **13/13 ok**.
+- README: step-by-step Docker start, smoke test, `docker compose run --rm backend pytest`,
+  troubleshooting table (missing models, queue stuck, exit 137 = memory, SSL, ports, reset DB).
+
+**Still to do when Docker Desktop is installed**: `docker compose up --build`, then
+`python3 demo/smoke_test.py` and `docker compose run --rm backend pytest`; fix whatever breaks
+(first real MySQL + Celery/Redis run).

@@ -1,8 +1,9 @@
 FROM node:20-alpine
 
 WORKDIR /app
-COPY package.json ./
-RUN npm install
+# Exact versions from package-lock.json (the same ones we tested)
+COPY package.json package-lock.json ./
+RUN npm ci
 COPY . .
 
 EXPOSE 5173

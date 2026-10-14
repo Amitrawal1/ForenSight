@@ -4,9 +4,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
 
-# ffmpeg: audio/video decoding · libgl1/libglib2.0-0: OpenCV · libsndfile1: librosa
+# ffmpeg: audio/video decoding · libgl1/libglib2.0-0: OpenCV
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ffmpeg libgl1 libglib2.0-0 libsndfile1 \
+        ffmpeg libgl1 libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -14,9 +14,11 @@ WORKDIR /app
 COPY requirements.txt requirements-ml.txt ./
 RUN pip install -r requirements.txt
 
-ARG INSTALL_ML=false
+# PyTorch from the CPU-only index (much smaller than the default GPU build).
+# Versions are the ones our tests ran with; torchvision is needed by timm.
+ARG INSTALL_ML=true
 RUN if [ "$INSTALL_ML" = "true" ]; then \
-        pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision torchaudio && \
+        pip install --index-url https://download.pytorch.org/whl/cpu torch==2.14.1 torchvision==0.29.1 && \
         pip install -r requirements-ml.txt; \
     fi
 
