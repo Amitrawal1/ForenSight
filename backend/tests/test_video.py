@@ -6,7 +6,7 @@ import pytest
 
 from app.pipeline.detectors.video.faces import video_score
 from app.pipeline.preprocessing.audio import ffmpeg_exe
-from app.pipeline.preprocessing.video import MAX_FRAMES, VideoDecodeError, sample_frames
+from app.pipeline.preprocessing.video import MAX_FRAMES, VideoDecodeError, sample_frames, trim_black_borders
 
 FIXTURES = Path(__file__).parent / "fixtures"
 needs_ffmpeg = pytest.mark.skipif(ffmpeg_exe() is None, reason="ffmpeg not installed")
@@ -64,3 +64,10 @@ def test_video_pipeline_runs_and_notes_missing_sound(tmp_path):
     assert any("no readable sound track" in n for n in out.notes)
     assert out.verdict in {"likely_authentic", "inconclusive", "manipulated", "ai_generated"}
     assert not np.isnan(out.confidence)
+
+
+def test_black_bars_are_trimmed():
+    frame = np.zeros((100, 200, 3), np.uint8)
+    frame[20:80, :] = 120  # picture in the middle, black bars above and below
+    assert trim_black_borders(frame).shape == (60, 200, 3)
+    assert trim_black_borders(np.zeros((100, 100, 3), np.uint8)).shape == (100, 100, 3)

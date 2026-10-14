@@ -8,7 +8,9 @@
    so these checks must not cancel each other out.
 3. Each kind's score is an average where checks we trust more count more. We also add
    a neutral 50% "starting guess", so one weak check alone can't decide the verdict.
-4. Instead of forcing a guess, unclear scores (or too little evidence) give "inconclusive".
+4. "Likely authentic" needs enough evidence, clean scores, and no check strongly
+   suspecting a fake.
+5. Instead of forcing a guess, unclear scores (or too little evidence) give "inconclusive".
 """
 
 from app.pipeline.detectors.base import DetectorResult
@@ -21,6 +23,10 @@ PRIOR_WEIGHT = 0.3
 # A kind only counts as "checked" if the checks looking at it have at least this much
 # trust together. E.g. ELA saying "found nothing" (trust 0.15) alone is too weak.
 CHECKED_MIN_TRUST = 0.3
+# A check this sure that the file is fake blocks "likely authentic", even if we trust
+# it too little to call the file fake. (Example: the AI-voice model is 100% sure, but the
+# audio is compressed, so it counts little. That is no reason to say "authentic".)
+STRONG_FAKE = 0.9
 KINDS = ("ai_generated", "manipulated")
 
 
@@ -50,7 +56,8 @@ def combine(results: list[DetectorResult]) -> tuple[str, float]:
     # Authentic: enough evidence overall, and every kind that was properly checked looks clean
     checked = [s for s, trust in scores.values() if trust >= CHECKED_MIN_TRUST]
     total_trust = sum(trust for _, trust in scores.values())
-    if checked and total_trust >= MIN_TOTAL_RELIABILITY and max(checked) < AUTHENTIC_BELOW:
+    strong_doubt = any(r.reliability > 0 and r.fake_score >= STRONG_FAKE for r in results)
+    if checked and total_trust >= MIN_TOTAL_RELIABILITY and max(checked) < AUTHENTIC_BELOW and not strong_doubt:
         return "likely_authentic", 1 - max(checked)
 
     return "inconclusive", 0.0

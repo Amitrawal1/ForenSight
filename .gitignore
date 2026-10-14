@@ -17,3 +17,7 @@ storage/reports/*
 *.onnx
 !models/README.md
 !data/README.md
+
+# Demo files are generated (demo/make_demo_files.py), not committed
+demo/files/
+demo/.cache/

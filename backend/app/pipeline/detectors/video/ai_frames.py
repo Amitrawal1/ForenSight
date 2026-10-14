@@ -10,6 +10,7 @@ from PIL import Image
 
 from app.pipeline.detectors.base import Detector, DetectorResult, MediaContext, Segment
 from app.pipeline.detectors.image.ai_image import fake_probability
+from app.pipeline.preprocessing.video import trim_black_borders
 
 RELIABILITY = 0.4
 
@@ -24,7 +25,8 @@ class VideoAiFramesDetector(Detector):
             return None
         step = ctx.frames[1].time_s - ctx.frames[0].time_s if len(ctx.frames) > 1 else 1.0
 
-        probs = [fake_probability(Image.fromarray(f.rgb)) for f in ctx.frames]
+        # Black bars around the picture must be removed first (see trim_black_borders)
+        probs = [fake_probability(Image.fromarray(trim_black_borders(f.rgb))) for f in ctx.frames]
         segments = [Segment(round(max(0.0, f.time_s - step / 2), 2), round(f.time_s + step / 2, 2), round(p, 3))
                     for f, p in zip(ctx.frames, probs)]
         p = np.array(probs)

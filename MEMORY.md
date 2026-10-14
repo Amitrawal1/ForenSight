@@ -662,3 +662,36 @@ test videos are much easier than real deepfakes. Speed: ~1 s per face per frame 
 **Next ideas (Phase 6+)**: Docker run-through (still never tested!), real deepfake datasets
 for evaluation, verify C2PA signatures (c2pa-python), skip faces cut off at the image edge,
 Alembic migrations, auto-delete old uploads, demo script + sample files.
+
+### 2026-10-14 — Session 7: Demo prep (+ 2 fixes found by it)
+**Built**: `demo/make_demo_files.py` (standalone; numpy/Pillow/OpenCV/pyarrow/imageio-ffmpeg,
+see `demo/requirements.txt`) → 12 files in `demo/files/` (git-ignored, with `demo/.cache/`).
+Sources: scikit-image v0.24.0 astronaut (PD, NASA) / chelsea / coffee (CC0); DiffusionDB
+part-000001 via HTTP range requests (CC0); LibriSpeech dummy parquet pinned to
+`5be91486…` (CC BY 4.0, credit in demo/README); AI voice = macOS `say` (Samantha), generated
+locally only. **Face swap uses a fictional AI face** (DiffusionDB 8257cf61…) — we avoided
+DiffusionDB images of real celebrities and LFW (unclear licence).
+`demo/README.md` = file table with measured results + licences; `demo/DEMO_SCRIPT.md` =
+3-min flow (AI image → scam-call voice with timeline ⭐ → face-swap video → honest
+Inconclusive voice note → PDF), checklist (warm up + pre-run all files into History),
+judge Q&A with honest numbers, "what it misses", backup plan.
+
+**Demo run exposed real problems (fixed in the product, not by tweaking the files):**
+1. **AI video judged "Likely Authentic"**: (a) demo bug — ffmpeg concat of different-sized
+   images froze on the first one (fixed: pad all to 640×640 first); (b) **letterbox black bars
+   made the AI-image model score an AI frame 0 % (100 % without bars)** → new
+   `trim_black_borders()` in `preprocessing/video.py`, used before the AI-image model on video
+   frames; (c) **fusion flaw**: a check ≥ 90 % sure of "fake" with low trust (compressed
+   voice = 1.0 @ 0.12) could not stop "Likely Authentic" → new rule `STRONG_FAKE = 0.9`: any
+   such check blocks "authentic" (→ Inconclusive). Result now AI-Generated 81 %.
+2. Real-voice demo first came out Inconclusive because the script **joined two recordings**
+   — the splice check was right. Fixed the demo (one continuous recording).
+3. Edited-photo demo first pasted a *more* compressed patch, which ELA cannot see (it finds
+   *less*-compressed pastes). Changed to pristine patch in a q60 photo: ELA now finds the
+   area (0.58) but trust is 0.15 (heavily compressed photo) → still "Likely Authentic".
+   **Kept as an honest "missed" example**, like 05 (single-image face swap, face model 0.45;
+   the same swap as video is caught at 0.93).
+
+Final demo results: 10/12 as intended (see demo/README.md). Tests: 66 passing (new:
+letterbox trim, strong-doubt fusion rule). Remaining pytest warnings come from starlette,
+reportlab and torch (third-party), not our code.

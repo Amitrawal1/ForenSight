@@ -80,3 +80,18 @@ def sample_frames(path: Path, work_dir: Path) -> tuple[list[Frame], float]:
             frames.append(Frame(round(min(duration, (i + 0.5) / fps), 2), np.asarray(img.convert("RGB"))))
         f.unlink()  # we keep the pixels in memory; no need for the temporary file
     return frames, duration
+
+
+def trim_black_borders(rgb: np.ndarray, threshold: float = 16.0) -> np.ndarray:
+    """Cut off black bars (letterboxing) around a video frame.
+
+    Many videos have black bars above/below or left/right. They confuse the AI-image
+    model a lot: in our test an AI frame scored 0% with bars and 100% without.
+    A row/column counts as a bar if it is almost black on average.
+    """
+    brightness = rgb.max(axis=2).astype(np.float32)
+    rows = np.flatnonzero(brightness.mean(axis=1) > threshold)
+    cols = np.flatnonzero(brightness.mean(axis=0) > threshold)
+    if len(rows) < 32 or len(cols) < 32:
+        return rgb  # (almost) all black: nothing sensible to trim
+    return rgb[rows[0] : rows[-1] + 1, cols[0] : cols[-1] + 1]

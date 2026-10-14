@@ -22,6 +22,9 @@ plain-language reasons, and a downloadable **PDF report**. Past checks are kept 
 Model files (~1.7 GB in total) are downloaded once with `backend/scripts/download_models.py`
 and checked with SHA-256.
 
+**Demo:** sample files and a 3-minute presentation script are in [`demo/`](demo/)
+(`demo/README.md`, `demo/DEMO_SCRIPT.md`).
+
 ## Quick start (Docker)
 
 Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).

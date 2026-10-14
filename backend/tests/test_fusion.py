@@ -42,3 +42,9 @@ def test_weak_nothing_found_does_not_block_authentic():
     ai_model = DetectorResult(name="ai_image", fake_score=0.0, reliability=0.7, fake_kind="ai_generated")
     ela_nothing = DetectorResult(name="ela", fake_score=0.2, reliability=0.15, fake_kind="manipulated")
     assert combine([ai_model, ela_nothing])[0] == "likely_authentic"
+
+
+def test_strong_low_trust_doubt_blocks_authentic():
+    frames = DetectorResult(name="frames", fake_score=0.0, reliability=0.4, fake_kind="ai_generated")
+    voice_compressed = DetectorResult(name="voice", fake_score=1.0, reliability=0.12, fake_kind="ai_generated")
+    assert combine([frames, voice_compressed])[0] == "inconclusive"
