@@ -21,3 +21,8 @@ storage/reports/*
 # Demo files are generated (demo/make_demo_files.py), not committed
 demo/files/
 demo/.cache/
+
+# Local (non-Docker) runs
+*.db
+storage/artifacts/
+.venv/

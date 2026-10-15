@@ -723,3 +723,20 @@ Reviewed the setup without Docker and fixed what would have broken or been waste
 **Still to do when Docker Desktop is installed**: `docker compose up --build`, then
 `python3 demo/smoke_test.py` and `docker compose run --rm backend pytest`; fix whatever breaks
 (first real MySQL + Celery/Redis run).
+
+### 2026-10-15 — Session 9: first full run driven like a user (no Docker)
+- macOS had blocked all access to ~/Desktop ("Operation not permitted") → user re-granted
+  Files & Folders access. Gave the user manual non-Docker run commands (venv in
+  ~/.venvs/forensight, `CELERY_ALWAYS_EAGER=true`, SQLite at storage/forensight.db, `npm run dev`).
+- `.gitignore`: added `*.db`, `storage/artifacts/` (was missing — generated images would have
+  shown up in git), `.venv/`.
+- Ran API (uvicorn) + UI (Vite) from the project folders and drove Chrome with
+  playwright-core (system Chrome, headless): upload via the real file input → result page →
+  clicked the timeline (player jumped to 21.8 s) → "Download PDF report" (valid PDF) →
+  face-swap video ("Jump to 0:11" moved the video) → AI image (tabs Original / AI focus /
+  Edited areas) → History (3 rows, thumbnails, badges). No page errors.
+- Results: 08 audio Manipulated 80 % (18 s), 11 video Manipulated 68 % (27 s), 03 image
+  AI-Generated 80 %.
+- Observed: in 08 the splice check found **both** joins (0:14 and 0:28 = start and end of the
+  inserted AI part — correct); the AI-voice model also marked 0:38–0:42 of the *real* speech
+  as fake (one false-alarm window; verdict unaffected, but it appears in the reason text).
