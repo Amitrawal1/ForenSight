@@ -26,3 +26,9 @@ demo/.cache/
 *.db
 storage/artifacts/
 .venv/
+MEMORY.md
+
+# Internal notes and planning files (kept locally, not needed by judges)
+CLAUDE.md
+docs/
+demo/DEMO_SCRIPT.md

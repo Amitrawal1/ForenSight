@@ -5,8 +5,6 @@ Explainable multi-signal deepfake forensics for images, videos and audio.
 Upload a file → get **Likely Authentic / AI-Generated / Manipulated / Inconclusive**,
 with heatmaps, timelines and plain-language reasons.
 
-See [`MEMORY.md`](MEMORY.md) for the full design, decisions and history.
-
 ## What it checks
 
 | Media | Checks |
@@ -22,8 +20,7 @@ plain-language reasons, and a downloadable **PDF report**. Past checks are kept 
 Model files (~1.7 GB in total) are downloaded once with `backend/scripts/download_models.py`
 and checked with SHA-256.
 
-**Demo:** sample files and a 3-minute presentation script are in [`demo/`](demo/)
-(`demo/README.md`, `demo/DEMO_SCRIPT.md`).
+**Demo:** sample files and their measured results are in [`demo/README.md`](demo/README.md).
 
 ## Quick start (Docker)
 
