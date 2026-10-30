@@ -14,6 +14,10 @@ export function scoreColor(score) {
 
 export const pct = (value) => Math.round(value * 100);
 
+// A check with little trust gives a hint, not a finding, so it should not say "fake".
+// 0.3 is the same line the verdict uses (CHECKED_MIN_TRUST in the backend's combiner.py).
+export const scoreWord = (reliability) => (reliability < 0.3 ? "signal, weak check" : "fake");
+
 // Seconds to "m:ss", for example 75 becomes "1:15"
 export function mmss(s) {
   return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;

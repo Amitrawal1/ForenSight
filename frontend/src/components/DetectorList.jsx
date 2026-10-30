@@ -1,4 +1,4 @@
-import { Card, Heading, pct, scoreColor } from "./results/shared.jsx";
+import { Card, Heading, pct, scoreColor, scoreWord } from "./results/shared.jsx";
 
 const KIND_NAMES = { ai_generated: "AI-generated", manipulated: "Manipulated" };
 
@@ -18,7 +18,7 @@ function CheckCard({ d }) {
             <p className="text-5xl font-extrabold leading-none tracking-tighter tabular-nums" style={{ color }}>
               {pct(d.fake_score)}%
             </p>
-            <p className="mt-1 text-sm font-semibold text-navy">fake · trust {pct(d.reliability)}%</p>
+            <p className="mt-1 text-sm font-semibold text-navy">{scoreWord(d.reliability)} · trust {pct(d.reliability)}%</p>
           </div>
         )}
       </div>

@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { artifactUrl, originalUrl } from "../lib/api.js";
 import Lightbox from "./results/Lightbox.jsx";
-import { Card, Heading, pct, scoreColor } from "./results/shared.jsx";
+import { Card, Heading, pct, scoreColor, scoreWord } from "./results/shared.jsx";
 
 // Heatmaps are drawn on top of the photo, with a short name and an explanation.
 const OVERLAYS = {
   ai_image: { title: "AI focus", help: "Red areas influenced the AI-image model most." },
   face_swap: { title: "Faces", help: "Boxes show each face checked (red = suspicious). Red heat shows where the face model looked." },
-  ela: { title: "Edited areas", help: "Red areas recompress differently from the rest of the image, which can mean they were edited." },
+  ela: { title: "Compression differences", help: "Red areas recompress differently from the rest of the image. Editing can cause this, but so can sharp edges and repeated saving, so on its own it is not proof of editing." },
 };
 
 // The frequency spectrum is not an overlay. It is a map of repeating patterns (made with an FFT, a maths
@@ -36,7 +36,7 @@ function Tile({ item, onOpen, className }) {
             <>
               {" · "}
               <span className="font-bold" style={{ color: scoreColor(d.fake_score) }}>
-                {pct(d.fake_score)}% fake
+                {pct(d.fake_score)}% {scoreWord(d.reliability)}
               </span>
               {` · trust ${pct(d.reliability)}%`}
             </>

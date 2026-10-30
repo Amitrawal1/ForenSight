@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { artifactUrl, originalUrl } from "../lib/api.js";
-import { Card, FAKE, Heading, mmss, pct, REAL, scoreColor, UNSURE } from "./results/shared.jsx";
+import { Card, FAKE, Heading, mmss, pct, REAL, scoreColor, UNSURE, scoreWord } from "./results/shared.jsx";
 
 // The two video checks shown under each frame in the frame strip
 const FRAME_CHECKS = [
@@ -108,7 +108,7 @@ export default function MediaPanel({ id, kind, media, detectors = [] }) {
                   {d.segments.map((s, i) => (
                     <div
                       key={i}
-                      title={`${mmss(s.start_s)}-${mmss(s.end_s)}: ${pct(s.score)}% fake`}
+                      title={`${mmss(s.start_s)}-${mmss(s.end_s)}: ${pct(s.score)}% ${scoreWord(d.reliability)}`}
                       className="absolute top-0 h-full"
                       style={{
                         left: `${(s.start_s / duration) * 100}%`,

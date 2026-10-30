@@ -87,7 +87,8 @@ class ElaDetector(Detector):
             score = 0.5 + 0.5 * min(1.0, cluster / 30)
             where = region_name(cy * BLOCK, cx * BLOCK, h, w)
             reasons = [f"A region in the {where} of the image recompresses differently from the rest, "
-                       "which can happen when part of an image is pasted in or edited."]
+                       "which can happen when part of an image is pasted in or edited.",
+                       "Sharp edges and repeated saving can also cause this, so it is not proof of editing."]
         else:
             score = 0.2
             # "Found nothing" is weak evidence (the edit may just be invisible to ELA),

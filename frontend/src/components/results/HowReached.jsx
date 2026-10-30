@@ -1,4 +1,4 @@
-import { Card, Heading, pct, scoreColor } from "./shared.jsx";
+import { Card, Heading, pct, scoreColor, scoreWord } from "./shared.jsx";
 
 // The two cut-off lines from backend/app/pipeline/fusion/combiner.py (AUTHENTIC_BELOW and FAKE_ABOVE).
 const AUTHENTIC_BELOW = 0.35;
@@ -37,7 +37,7 @@ function Axis() {
 
 // One check: name, fake score on the shared scale, and how much it is trusted
 function Row({ d }) {
-  const title = `${d.label}: ${pct(d.fake_score)}% fake, trust ${pct(d.reliability)}%`;
+  const title = `${d.label}: ${pct(d.fake_score)}% ${scoreWord(d.reliability)}, trust ${pct(d.reliability)}%`;
   return (
     <li className={ROW} title={title}>
       <span className="font-semibold leading-tight text-navy md:order-1">{d.label}</span>
