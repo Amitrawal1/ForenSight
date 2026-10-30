@@ -135,7 +135,7 @@ function DropZone() {
 // Section heading: a big solid pill.
 function SectionTitle({ children, tone = "teal" }) {
   return (
-    <h2 className="text-4xl leading-tight font-semibold tracking-tight sm:text-6xl">
+    <h2 className="text-4xl leading-tight font-semibold tracking-tight sm:text-5xl">
       <Pill tone={tone}>{children}</Pill>
     </h2>
   );
@@ -171,12 +171,12 @@ export default function UploadPage() {
         </div>
       </section>
 
-      <section className="px-4 py-16 sm:px-8 sm:py-24">
+      <section className="px-4 py-10 sm:px-8 sm:py-16">
         <SectionTitle>How it works</SectionTitle>
         <ol className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {STEPS.map((step, i) => (
             <li key={step.title} className="rounded-card border border-navy bg-white p-7 sm:p-8">
-              <span className="block text-6xl font-extrabold tracking-tight text-teal" aria-hidden="true">
+              <span className="block text-5xl font-extrabold tracking-tight text-teal" aria-hidden="true">
                 {i + 1}
               </span>
               <h3 className="mt-8 text-2xl font-semibold tracking-tight sm:text-3xl">{step.title}</h3>
@@ -186,11 +186,11 @@ export default function UploadPage() {
         </ol>
       </section>
 
-      <section className="bg-teal px-4 py-20 text-white sm:px-8 sm:py-32">
-        <p className="mx-auto max-w-6xl text-center text-5xl leading-[1.02] font-bold tracking-tight sm:text-7xl lg:text-8xl">A reason matters more than a score.</p>
+      <section className="bg-teal px-4 py-14 text-white sm:px-8 sm:py-20">
+        <p className="mx-auto max-w-6xl text-center text-4xl leading-[1.02] font-bold tracking-tight sm:text-5xl lg:text-6xl">A reason matters more than a score.</p>
       </section>
 
-      <section className="px-4 py-16 sm:px-8 sm:py-24">
+      <section className="px-4 py-10 sm:px-8 sm:py-16">
         <SectionTitle tone="navy">Four verdicts</SectionTitle>
         <ul className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {VERDICT_MEANINGS.map(({ key, text }) => (

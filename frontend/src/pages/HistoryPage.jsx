@@ -63,7 +63,7 @@ export default function HistoryPage() {
 
   return (
     <Shell>
-      <h2 className="flex items-center gap-[0.14em] text-6xl leading-tight font-semibold tracking-tight sm:text-8xl">
+      <h2 className="flex items-center gap-[0.14em] text-5xl leading-tight font-semibold tracking-tight sm:text-6xl">
         <Pill tone="teal">History</Pill>
         <span className="block h-[1.39em] w-[1.39em] shrink-0 rounded-full bg-white" aria-hidden="true" />
       </h2>
@@ -87,7 +87,7 @@ export default function HistoryPage() {
                 className="flex cursor-pointer flex-wrap items-center gap-x-4 gap-y-3 rounded-card border border-navy bg-white p-3 pr-5 transition-colors hover:border-teal sm:flex-nowrap sm:gap-5"
               >
                 {/* Thumbnail for images and videos, an icon for audio */}
-                <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[20px] border border-line bg-page sm:h-20 sm:w-20">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[16px] border border-line bg-page sm:h-20 sm:w-20">
                   {a.thumbnail_path ? <img src={artifactUrl(a.id, a.thumbnail_path)} alt="" className="h-full w-full object-cover" /> : <MediaIcon type={a.media_type} />}
                 </div>
                 <div className="min-w-0 flex-1 basis-40">

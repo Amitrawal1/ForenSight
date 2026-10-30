@@ -51,7 +51,7 @@ export default function MediaPanel({ id, kind, media, detectors = [] }) {
       <div className={`grid items-start gap-5 ${worstFrames.length ? "lg:grid-cols-2" : ""}`}>
         <Card>
           {kind === "video" ? (
-            <video ref={player} src={originalUrl(id)} controls className="max-h-[480px] w-full rounded-[20px] bg-navy" onTimeUpdate={(e) => setTime(e.target.currentTime)} />
+            <video ref={player} src={originalUrl(id)} controls className="max-h-[400px] w-full rounded-[16px] bg-navy" onTimeUpdate={(e) => setTime(e.target.currentTime)} />
           ) : (
             <audio ref={player} src={originalUrl(id)} controls className="w-full" onTimeUpdate={(e) => setTime(e.target.currentTime)} />
           )}
@@ -69,7 +69,7 @@ export default function MediaPanel({ id, kind, media, detectors = [] }) {
                   Jump to {mmss(at)}
                 </button>
               </div>
-              <img src={artifactUrl(id, d.heatmap)} alt="Most suspicious frame" className="mt-4 max-h-[480px] w-full rounded-[20px] bg-page object-contain" />
+              <img src={artifactUrl(id, d.heatmap)} alt="Most suspicious frame" className="mt-4 max-h-[400px] w-full rounded-[16px] bg-page object-contain" />
               <p className="mt-3 text-muted">Boxes show each face checked (red = suspicious). Red heat shows where the face model looked.</p>
               <p className="mt-2 text-sm text-navy">
                 <span className="font-semibold">{d.label}</span>
@@ -173,7 +173,7 @@ export default function MediaPanel({ id, kind, media, detectors = [] }) {
         <Card>
           <h3 className="text-2xl font-bold tracking-tight text-navy">Spectrogram</h3>
           <p className="mt-1 text-muted">A picture of the sound: time runs left to right, pitch runs bottom to top, and brighter means louder.</p>
-          <img src={artifactUrl(id, media.spectrogram)} alt="Spectrogram" className="mt-4 w-full rounded-[20px]" />
+          <img src={artifactUrl(id, media.spectrogram)} alt="Spectrogram" className="mt-4 w-full rounded-[16px]" />
         </Card>
       )}
     </section>

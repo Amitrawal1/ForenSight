@@ -26,11 +26,14 @@
 
   --font-sans: "Outfit", sans-serif;
   --tracking-tight: -0.03em;
-  --radius-card: 32px;
+  --radius-card: 24px;
+  --text-xs: 0.8125rem; /* keeps the smallest text readable after the size change below */
 }
 
 @layer base {
   html {
+    /* Everything sized in rem (text, spacing) is 12.5% smaller than the browser default. */
+    font-size: 87.5%;
     /* Stops the scrollbar appearing and shifting the layout between pages. */
     scrollbar-gutter: stable;
   }
@@ -64,13 +67,13 @@
 
 @media (min-width: 1024px) {
   .wordmark-word {
-    height: min(12.6vw, 22vh);
+    height: min(8.8vw, 16vh);
   }
 }
 
 /* Big statement text in the hero. */
 .hero-statement {
-  font-size: clamp(32px, 3.9vw, 60px);
+  font-size: clamp(26px, 2.8vw, 42px);
 }
 
 /* Sliding block for a progress bar when we do not know the percent. */

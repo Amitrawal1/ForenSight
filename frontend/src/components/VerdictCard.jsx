@@ -34,15 +34,15 @@ export default function VerdictCard({ analysis, onDelete }) {
   const facts = fileFacts(analysis);
 
   return (
-    <section className="overflow-hidden rounded-[32px] border border-navy bg-white">
+    <section className="overflow-hidden rounded-[24px] border border-navy bg-white">
       {/* Solid verdict block. Everything here is large, because small white text is hard to read on the amber colour. */}
       <div className="p-5 text-white sm:p-10" style={{ background: color }}>
         <p className="break-words text-xl font-bold">{analysis.filename}</p>
         <div className="mt-4 flex flex-wrap items-end justify-between gap-x-10 gap-y-4">
-          <h1 className="min-w-0 text-[clamp(2.6rem,9vw,7.5rem)] font-extrabold leading-[0.95] tracking-tighter">{v.label}</h1>
+          <h1 className="min-w-0 text-[clamp(2.4rem,6vw,5rem)] font-extrabold leading-[0.95] tracking-tighter">{v.label}</h1>
           {analysis.verdict !== "inconclusive" && (
             <div className="shrink-0">
-              <p className="text-[clamp(3rem,8vw,6.5rem)] font-extrabold leading-none tracking-tighter tabular-nums">{pct}%</p>
+              <p className="text-[clamp(2.6rem,5vw,4.5rem)] font-extrabold leading-none tracking-tighter tabular-nums">{pct}%</p>
               <p className="mt-1 text-xl font-bold">Confidence</p>
             </div>
           )}

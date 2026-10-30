@@ -21,7 +21,7 @@ function Waiting({ analysis }) {
   const label = queued ? "Waiting in queue" : analysis.progress?.step ?? "Running checks";
   return (
     <Card className="sm:p-12!">
-      <p className="break-words text-[clamp(1.9rem,4.5vw,3.25rem)] font-bold leading-[1.1] tracking-tight text-navy">
+      <p className="break-words text-[clamp(1.7rem,3vw,2.6rem)] font-bold leading-[1.1] tracking-tight text-navy">
         <Pill tone="teal">Analysing</Pill> {analysis?.filename ?? "file"}
       </p>
       <div className="mt-8">
@@ -85,7 +85,7 @@ export default function AnalysisPage({ id }) {
       <div className="space-y-5">
         {back}
         <Card className="sm:p-12!">
-          <p className="break-words text-[clamp(1.9rem,4.5vw,3.25rem)] font-bold leading-[1.1] tracking-tight text-navy">
+          <p className="break-words text-[clamp(1.7rem,3vw,2.6rem)] font-bold leading-[1.1] tracking-tight text-navy">
             <Pill tone="navy">Analysis failed</Pill> {analysis.filename}
           </p>
           <p className="mt-6 break-words text-xl font-medium text-navy">{analysis.error ?? "The server did not give a reason."}</p>
@@ -117,7 +117,7 @@ export default function AnalysisPage({ id }) {
         <MediaPanel id={analysis.id} kind={analysis.media_type} media={ev.media} detectors={ev.detectors} />
       )}
       <DetectorList detectors={ev.detectors} notes={ev.notes} />
-      <div className="rounded-[32px] bg-navy p-6 text-white sm:p-10">
+      <div className="rounded-[24px] bg-navy p-6 text-white sm:p-10">
         <p className="text-2xl font-bold leading-snug tracking-tight sm:text-3xl">This verdict supports human judgement. It is not final proof.</p>
         <p className="mt-2 text-lg">Automated checks can be wrong. Consider where the file came from and its context before acting on it.</p>
       </div>

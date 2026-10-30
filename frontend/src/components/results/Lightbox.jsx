@@ -17,7 +17,7 @@ export default function Lightbox({ item, onClose }) {
       onClose={onClose}
       // A click on the backdrop lands on the dialog itself, so close in that case
       onClick={(e) => e.target === dialog.current && dialog.current.close()}
-      className="m-auto max-h-[94vh] w-fit max-w-[min(94vw,1280px)] rounded-[32px] border border-navy bg-white p-4 text-navy backdrop:bg-navy/80 sm:p-6"
+      className="m-auto max-h-[94vh] w-fit max-w-[min(94vw,1280px)] rounded-[24px] border border-navy bg-white p-4 text-navy backdrop:bg-navy/80 sm:p-6"
     >
       <div className="mb-3 flex items-start justify-between gap-4">
         <h3 className="text-2xl font-bold tracking-tight">{item.title}</h3>

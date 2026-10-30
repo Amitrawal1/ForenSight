@@ -24,7 +24,7 @@ function Tile({ item, onOpen, className }) {
   const d = item.detector;
   return (
     <Card className={`flex flex-col p-4! ${className}`}>
-      <button onClick={onOpen} aria-label={`Enlarge ${item.title}`} className="block w-full cursor-zoom-in overflow-hidden rounded-[20px] bg-page">
+      <button onClick={onOpen} aria-label={`Enlarge ${item.title}`} className="block w-full cursor-zoom-in overflow-hidden rounded-[16px] bg-page">
         <img src={item.overlay ?? item.src} alt={item.overlay ? `${item.title} heatmap` : item.alt} className="aspect-[4/3] w-full object-contain" />
       </button>
       <h3 className="mt-4 text-2xl font-bold tracking-tight text-navy">{item.title}</h3>

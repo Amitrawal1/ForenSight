@@ -75,7 +75,7 @@ export default function HowReached({ detectors = [] }) {
       <Heading pill="How">the verdict was reached</Heading>
       <Card className="space-y-8">
         {proof && (
-          <div className="rounded-[20px] bg-navy p-5 text-white sm:p-6">
+          <div className="rounded-[16px] bg-navy p-5 text-white sm:p-6">
             <p className="text-xl font-bold tracking-tight sm:text-2xl">{proof.label} decided this verdict.</p>
             <p className="mt-2 text-white/90">
               It found proof-like information, which decides on its own. {proof.reasons?.[0]} The scores below did not change the result.
