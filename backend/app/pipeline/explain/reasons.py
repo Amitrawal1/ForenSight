@@ -13,6 +13,7 @@ SUMMARY = {
 }
 
 TOP_N = 3
+INCONCLUSIVE_N = 4
 
 
 def explain(verdict: str, results: list[DetectorResult]) -> tuple[str, list[str]]:
@@ -27,5 +28,9 @@ def explain(verdict: str, results: list[DetectorResult]) -> tuple[str, list[str]
 
     # Strongest evidence first: reliable detectors that are far from 0.5
     relevant.sort(key=lambda r: r.reliability * abs(r.fake_score - 0.5), reverse=True)
-    reasons = [r.reasons[0] for r in relevant if r.reasons and r.reliability > 0][:TOP_N]
-    return SUMMARY[verdict], reasons
+    trusted = [r for r in relevant if r.reasons and r.reliability > 0]
+    if verdict == "inconclusive":
+        # Show every sentence: a check's later ones say why it counts for little
+        # (e.g. compressed audio), and that is why we are not making a call.
+        return SUMMARY[verdict], [s for r in trusted for s in r.reasons][:INCONCLUSIVE_N]
+    return SUMMARY[verdict], [r.reasons[0] for r in trusted][:TOP_N]

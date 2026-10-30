@@ -5,7 +5,7 @@ The report contains: the verdict and confidence, the main reasons, evidence pict
 do next, and the limits of the tool.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from reportlab.graphics.shapes import Drawing, Line, Rect, String
@@ -183,13 +183,14 @@ def build_report(analysis, artifact_dir: Path, out_path: Path) -> Path:
     ev = analysis.evidence or {}
     detectors = ev.get("detectors", [])
     verdict = analysis.verdict.value if analysis.verdict else "inconclusive"
-    created = analysis.created_at or datetime.now()
+    # The database saves times in UTC, so the report labels them as UTC
+    created = analysis.created_at or datetime.now(timezone.utc)
 
     story = [
         Paragraph("ForenSight report", st["h1"]),
         Paragraph(
             f"File: <b>{_text(analysis.filename)}</b> ({analysis.media_type.value}) &nbsp;·&nbsp; "
-            f"Checked: {created:%d %B %Y, %H:%M} &nbsp;·&nbsp; Report ID: {analysis.id[:8]}",
+            f"Checked: {created:%d %B %Y, %H:%M} UTC &nbsp;·&nbsp; Report ID: {analysis.id[:8]}",
             st["small"],
         ),
         Spacer(1, 10),
