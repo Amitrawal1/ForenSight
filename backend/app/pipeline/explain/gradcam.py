@@ -27,7 +27,11 @@ def grad_cam(forward: Callable, layer, x, to_grid: Callable | None = None) -> np
     saved = {}
 
     def keep_output(_module, _inputs, output):
-        saved["act"] = output[0] if isinstance(output, tuple) else output
+        act = output[0] if isinstance(output, tuple) else output
+        # Start gradient tracking here. With frozen model weights, PyTorch then stores
+        # nothing for the earlier layers, which saves over 1 GB on EfficientNet-B7.
+        act.requires_grad_(True)
+        saved["act"] = act
 
     handle = layer.register_forward_hook(keep_output)
     try:

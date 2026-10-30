@@ -70,6 +70,7 @@ def _load_model():
     model = DeepFakeClassifier()
     model.load_state_dict(state, strict=True)
     model.eval()
+    model.requires_grad_(False)  # we never train; this keeps Grad-CAM's memory use low
     return model
 
 

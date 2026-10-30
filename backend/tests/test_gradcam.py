@@ -22,6 +22,17 @@ def test_gradcam_points_at_the_bright_area():
     assert cam[:4, :4].min() > 0.9 and cam[4:, 4:].max() == 0.0
 
 
+def test_gradcam_same_result_with_frozen_weights():
+    # Our models are frozen to save memory; the heatmap must not change
+    torch.manual_seed(0)
+    model = torch.nn.Sequential(torch.nn.Conv2d(1, 4, 3), torch.nn.ReLU(), torch.nn.Conv2d(4, 4, 1))
+    x = torch.rand(1, 1, 8, 8)
+    normal = grad_cam(lambda t: model(t).sum(), model[0], x)
+    model.requires_grad_(False)
+    frozen = grad_cam(lambda t: model(t).sum(), model[0], x)
+    assert np.allclose(normal, frozen)
+
+
 def test_vit_tokens_to_grid_drops_cls_token():
     tokens = torch.zeros(1, 1 + 24 * 24, 384)
     assert tuple(vit_tokens_to_grid(tokens).shape) == (1, 384, 24, 24)

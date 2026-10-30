@@ -60,6 +60,7 @@ def _load_model():
     folder = model_path(f"{MODEL_DIR}/config.json").parent
     model = ViTForImageClassification.from_pretrained(folder)
     model.eval()
+    model.requires_grad_(False)  # we never train; this keeps Grad-CAM's memory use low
     return model
 
 
