@@ -18,6 +18,7 @@ from app.pipeline.preprocessing.audio import ffmpeg_exe
 MAX_FRAMES = 12
 MAX_FPS = 1.0  # short videos: at most one frame per second
 MAX_SIDE = 1280  # shrink big videos (4K) first; faces are still big enough
+PREVIEW_WIDTH = 320  # width of the small frame pictures on the result page
 
 
 class VideoDecodeError(Exception):
@@ -80,6 +81,19 @@ def sample_frames(path: Path, work_dir: Path) -> tuple[list[Frame], float]:
             frames.append(Frame(round(min(duration, (i + 0.5) / fps), 2), np.asarray(img.convert("RGB"))))
         f.unlink()  # we keep the pixels in memory; no need for the temporary file
     return frames, duration
+
+
+def save_frame_previews(frames: list[Frame], out_dir: Path) -> list[dict]:
+    """Save each frame as a small JPEG and return [{"file": name, "time_s": time}]."""
+    previews = []
+    for i, frame in enumerate(frames):
+        img = Image.fromarray(frame.rgb)
+        if img.width > PREVIEW_WIDTH:
+            img = img.resize((PREVIEW_WIDTH, max(1, round(img.height * PREVIEW_WIDTH / img.width))))
+        name = f"frame_{i:02d}.jpg"
+        img.save(out_dir / name, "JPEG", quality=80)
+        previews.append({"file": name, "time_s": frame.time_s})
+    return previews
 
 
 def trim_black_borders(rgb: np.ndarray, threshold: float = 16.0) -> np.ndarray:

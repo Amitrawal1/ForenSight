@@ -1,6 +1,30 @@
+// How each verdict looks. Red, amber and green are used only here, to carry the verdict's meaning.
+// tone: classes for a verdict pill. The text is navy on a pale tint because white text
+// on the amber colour is too faint to read (about 4.2:1, and we need 4.5:1).
+// bar: class for a solid bar or dot. color: the same colour as a hex value.
 export const VERDICTS = {
-  likely_authentic: { label: "Likely Authentic", tone: "bg-emerald-50 border-emerald-300 text-emerald-800", bar: "bg-emerald-500" },
-  ai_generated: { label: "AI-Generated", tone: "bg-rose-50 border-rose-300 text-rose-800", bar: "bg-rose-500" },
-  manipulated: { label: "Manipulated", tone: "bg-amber-50 border-amber-300 text-amber-800", bar: "bg-amber-500" },
-  inconclusive: { label: "Inconclusive", tone: "bg-slate-100 border-slate-300 text-slate-700", bar: "bg-slate-400" },
+  likely_authentic: {
+    label: "Likely Authentic",
+    tone: "bg-verdict-authentic/10 border-verdict-authentic text-navy",
+    bar: "bg-verdict-authentic",
+    color: "#1F7A5C",
+  },
+  ai_generated: {
+    label: "AI-Generated",
+    tone: "bg-verdict-ai/10 border-verdict-ai text-navy",
+    bar: "bg-verdict-ai",
+    color: "#B4233C",
+  },
+  manipulated: {
+    label: "Manipulated",
+    tone: "bg-verdict-manipulated/10 border-verdict-manipulated text-navy",
+    bar: "bg-verdict-manipulated",
+    color: "#B4690E",
+  },
+  inconclusive: {
+    label: "Inconclusive",
+    tone: "bg-verdict-inconclusive/10 border-verdict-inconclusive text-navy",
+    bar: "bg-verdict-inconclusive",
+    color: "#4A5568",
+  },
 };

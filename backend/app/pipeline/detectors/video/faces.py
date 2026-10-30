@@ -48,7 +48,10 @@ class VideoFaceSwapDetector(Detector):
         step = ctx.frames[1].time_s - ctx.frames[0].time_s if len(ctx.frames) > 1 else 1.0
 
         scored = []  # (frame, highest face score in that frame)
-        for frame in ctx.frames:
+        total = len(ctx.frames)
+        for i, frame in enumerate(ctx.frames):
+            # One extra item at the end stands for the heatmap below
+            ctx.report(i, total + 1, f"Checking faces: frame {i + 1} of {total}")
             checks = check_faces(frame.rgb, with_heatmap=False)
             if checks:
                 scored.append((frame, max(c.prob for c in checks)))
@@ -61,6 +64,7 @@ class VideoFaceSwapDetector(Detector):
                     for f, p in scored]
 
         # Heatmap for the most suspicious frame
+        ctx.report(total, total + 1, "Drawing the face heatmap")
         worst_frame, worst = max(scored, key=lambda item: item[1])
         checks = check_faces(worst_frame.rgb, with_heatmap=True)
         cv2.imwrite(str(ctx.out_dir / HEATMAP_NAME), draw_faces(worst_frame.rgb, checks))

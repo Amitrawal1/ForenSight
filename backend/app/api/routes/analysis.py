@@ -10,8 +10,9 @@ from app.core.config import get_settings
 from app.db.models import Analysis, Status
 from app.db.session import get_db
 from app.pipeline.preprocessing import file_type
-from app.schemas.analysis import AnalysisOut, AnalysisSummary
+from app.schemas.analysis import AnalysisOut, AnalysisSummary, Progress
 from app.reports.pdf_report import build_report
+from app.services.progress import get_progress
 from app.services.storage import UploadTooLarge, artifact_dir, delete_files, report_path, save_upload
 from app.workers.tasks import run_analysis
 
@@ -66,7 +67,12 @@ def list_analyses(limit: int = 50, db: Session = Depends(get_db)):
 
 @router.get("/{analysis_id}", response_model=AnalysisOut)
 def get_analysis(analysis_id: str, db: Session = Depends(get_db)):
-    return _get_or_404(db, analysis_id)
+    a = _get_or_404(db, analysis_id)
+    out = AnalysisOut.model_validate(a)
+    if a.status == Status.processing:
+        current = get_progress(a.id)
+        out.progress = Progress(**current) if current else None
+    return out
 
 
 @router.get("/{analysis_id}/original")

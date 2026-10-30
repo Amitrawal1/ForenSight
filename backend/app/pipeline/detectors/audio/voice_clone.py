@@ -108,7 +108,9 @@ class VoiceCloneDetector(Detector):
         hop = max(HOP_S, (duration - window_s) / (MAX_WINDOWS - 1)) if duration > window_s else HOP_S
 
         segments = []
-        for w in split_windows(ctx.audio, window_s=window_s, hop_s=hop):
+        windows = split_windows(ctx.audio, window_s=window_s, hop_s=hop)
+        for i, w in enumerate(windows):
+            ctx.report(i, len(windows), f"Listening for AI voice: part {i + 1} of {len(windows)}")
             if is_silent(w.samples):
                 continue  # no speech to judge; models often call silence "fake"
             segments.append(Segment(round(w.start_s, 2), round(w.end_s, 2), round(fake_probability(w.samples), 3)))

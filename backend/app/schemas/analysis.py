@@ -20,7 +20,16 @@ class AnalysisSummary(BaseModel):
     created_at: datetime | None
 
 
+class Progress(BaseModel):
+    """How far a running analysis has come. `percent` goes from 0 to 100."""
+
+    percent: int
+    step: str
+
+
 class AnalysisOut(AnalysisSummary):
     mime_type: str
     evidence: dict | None
     error: str | None
+    # Only filled in while the analysis is running, by GET /analyses/{id}
+    progress: Progress | None = None

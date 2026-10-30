@@ -1,51 +1,72 @@
-// Per-check evidence: how "fake" each check thinks the file is, how much we trust it, and its reasons.
+import { Card, Heading, pct, scoreColor } from "./results/shared.jsx";
 
-function barColor(score) {
-  if (score >= 0.65) return "bg-rose-500";
-  if (score <= 0.35) return "bg-emerald-500";
-  return "bg-amber-400";
+const KIND_NAMES = { ai_generated: "AI-generated", manipulated: "Manipulated" };
+
+// One check, always open: name, fake score, trust, bar and every reason it gave.
+function CheckCard({ d }) {
+  const scored = d.reliability > 0;
+  const color = scoreColor(d.fake_score);
+  return (
+    <Card className="flex flex-col lg:odd:last:col-span-2">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h3 className="text-2xl font-bold leading-tight tracking-tight text-navy">{d.label}</h3>
+          <p className="mt-1 text-sm text-muted">{scored ? `Looks for: ${KIND_NAMES[d.fake_kind] ?? d.fake_kind}` : "Info only, not counted in the verdict"}</p>
+        </div>
+        {scored && (
+          <div className="shrink-0 text-right">
+            <p className="text-5xl font-extrabold leading-none tracking-tighter tabular-nums" style={{ color }}>
+              {pct(d.fake_score)}%
+            </p>
+            <p className="mt-1 text-sm font-semibold text-navy">fake · trust {pct(d.reliability)}%</p>
+          </div>
+        )}
+      </div>
+
+      {scored && (
+        // Fake-score bar: green = looks real, red = looks fake
+        <div className="mt-4 h-3 rounded-full bg-page">
+          <div className="h-full rounded-full" style={{ width: `${Math.max(2, d.fake_score * 100)}%`, background: color }} />
+        </div>
+      )}
+
+      {d.reasons?.length > 0 && (
+        <ul className="mt-4 space-y-2 text-navy">
+          {d.reasons.map((r, i) => (
+            <li key={i}>{r}</li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
 }
 
-export default function DetectorList({ detectors }) {
-  if (!detectors.length) return null;
+// Per-check evidence, plus notes such as checks that were skipped.
+export default function DetectorList({ detectors = [], notes = [] }) {
+  if (!detectors.length && !notes.length) return null;
   // Most trusted checks first
   const sorted = [...detectors].sort((a, b) => b.reliability - a.reliability);
 
   return (
-    <section className="rounded-xl border bg-white">
-      <h3 className="border-b px-4 py-3 font-semibold">Evidence from each check</h3>
-      <ul className="divide-y">
-        {sorted.map((d) => (
-          <li key={d.name} className="px-4 py-3">
-            <details>
-              <summary className="flex cursor-pointer items-center gap-4">
-                <span className="w-40 shrink-0 font-medium">{d.label}</span>
-                {d.reliability > 0 ? (
-                  <>
-                    {/* Fake-score bar: green = looks real, red = looks fake */}
-                    <div className="h-2 flex-1 rounded-full bg-slate-100">
-                      <div className={`h-2 rounded-full ${barColor(d.fake_score)}`} style={{ width: `${Math.max(2, d.fake_score * 100)}%` }} />
-                    </div>
-                    <span className="w-44 shrink-0 text-right text-xs text-slate-500">
-                      {Math.round(d.fake_score * 100)}% fake · trust {Math.round(d.reliability * 100)}%
-                    </span>
-                  </>
-                ) : (
-                  <span className="flex-1 text-right text-xs text-slate-500">info only</span>
-                )}
-              </summary>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
-                {d.reasons.map((r) => (
-                  <li key={r}>{r}</li>
-                ))}
-              </ul>
-            </details>
-          </li>
-        ))}
-      </ul>
-      <p className="border-t px-4 py-2 text-xs text-slate-500">
-        "Trust" is how much each check counts in the final verdict. Learned models count more than simple checks.
-      </p>
+    <section className="space-y-5">
+      <Heading pill="Checks">that ran</Heading>
+      {sorted.length > 0 && (
+        <>
+          <div className="grid gap-5 lg:grid-cols-2">
+            {sorted.map((d) => (
+              <CheckCard key={d.name} d={d} />
+            ))}
+          </div>
+          <p className="text-muted">"Trust" is how much each check counts in the final verdict. Learned models count more than simple checks.</p>
+        </>
+      )}
+      {notes.length > 0 && (
+        <div className="space-y-1 text-navy">
+          {notes.map((n, i) => (
+            <p key={i}>{n}</p>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

@@ -26,7 +26,10 @@ class VideoAiFramesDetector(Detector):
         step = ctx.frames[1].time_s - ctx.frames[0].time_s if len(ctx.frames) > 1 else 1.0
 
         # Black bars around the picture must be removed first (see trim_black_borders)
-        probs = [fake_probability(Image.fromarray(trim_black_borders(f.rgb))) for f in ctx.frames]
+        probs = []
+        for i, f in enumerate(ctx.frames):
+            ctx.report(i, len(ctx.frames), f"Checking frames for AI: frame {i + 1} of {len(ctx.frames)}")
+            probs.append(fake_probability(Image.fromarray(trim_black_borders(f.rgb))))
         segments = [Segment(round(max(0.0, f.time_s - step / 2), 2), round(f.time_s + step / 2, 2), round(p, 3))
                     for f, p in zip(ctx.frames, probs)]
         p = np.array(probs)

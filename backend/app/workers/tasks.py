@@ -7,6 +7,7 @@ from app.core.celery_app import celery_app
 from app.db.models import Analysis, Status, Verdict
 from app.db.session import SessionLocal
 from app.pipeline.runner import analyse
+from app.services.progress import clear_progress, set_progress
 from app.services.storage import artifact_dir
 
 log = logging.getLogger(__name__)
@@ -41,7 +42,8 @@ def run_analysis(analysis_id: str) -> str:
         db.commit()
 
         try:
-            out = analyse(Path(a.stored_path), a.media_type.value, a.mime_type, artifact_dir(a.id))
+            out = analyse(Path(a.stored_path), a.media_type.value, a.mime_type, artifact_dir(a.id),
+                          on_progress=lambda percent, step: set_progress(analysis_id, percent, step))
             a.verdict = Verdict(out.verdict)
             a.confidence = out.confidence
             a.evidence = out.evidence()
@@ -52,4 +54,5 @@ def run_analysis(analysis_id: str) -> str:
             a.status = Status.failed
             a.error = f"{type(e).__name__}: {e}"[:500]
         db.commit()
+    clear_progress(analysis_id)  # the job is over, so there is no progress left to show
     return analysis_id

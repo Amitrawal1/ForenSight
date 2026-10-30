@@ -1,90 +1,83 @@
 import { useState } from "react";
 import { artifactUrl, originalUrl } from "../lib/api.js";
+import Lightbox from "./results/Lightbox.jsx";
+import { Card, Heading, pct, scoreColor } from "./results/shared.jsx";
 
-// Heatmaps that are drawn on top of the photo, with a short name and an explanation.
-// (The frequency spectrum is a different kind of picture, so it gets its own panel.)
+// Heatmaps are drawn on top of the photo, with a short name and an explanation.
 const OVERLAYS = {
-  ai_image: { tab: "AI focus", help: "Red areas influenced the AI-image model most." },
-  face_swap: { tab: "Faces", help: "Boxes show each face checked (red = suspicious). Red heat shows where the face model looked." },
-  ela: { tab: "Edited areas", help: "Red areas recompress differently from the rest of the image, which can mean they were edited." },
+  ai_image: { title: "AI focus", help: "Red areas influenced the AI-image model most." },
+  face_swap: { title: "Faces", help: "Boxes show each face checked (red = suspicious). Red heat shows where the face model looked." },
+  ela: { title: "Edited areas", help: "Red areas recompress differently from the rest of the image, which can mean they were edited." },
 };
 
-// Pick the heatmap that best explains the verdict: the most trusted check that leans "fake",
-// otherwise the faces view (if any), otherwise the first available.
-function defaultTab(maps) {
-  const leaning = maps.filter((d) => d.fake_score >= 0.5).sort((a, b) => b.reliability - a.reliability);
-  if (leaning.length) return leaning[0].name;
-  return (maps.find((d) => d.name === "face_swap") ?? maps[0])?.name ?? "original";
+// The frequency spectrum is not an overlay. It is a map of repeating patterns (made with an FFT, a maths
+// tool that splits an image into patterns), not a picture of the photo, so its pixels do not line up with the photo.
+const SPECTRUM_HELP =
+  "A map of the image's fine, repeating patterns, not a picture of the photo. Bright isolated dots away from the centre can be a trace of AI upsampling.";
+
+// Wide-screen columns for each number of pictures, so no card is left alone on a row.
+// Five pictures use a 6-column grid: two wide cards on top, three below.
+const COLUMNS = { 1: "lg:grid-cols-2", 2: "lg:grid-cols-2", 3: "lg:grid-cols-3", 4: "lg:grid-cols-4", 5: "lg:grid-cols-6" };
+
+// One gallery card: picture, name, explanation and the check that made it. Click to enlarge.
+function Tile({ item, onOpen, className }) {
+  const d = item.detector;
+  return (
+    <Card className={`flex flex-col p-4! ${className}`}>
+      <button onClick={onOpen} aria-label={`Enlarge ${item.title}`} className="block w-full cursor-zoom-in overflow-hidden rounded-[20px] bg-page">
+        <img src={item.overlay ?? item.src} alt={item.overlay ? `${item.title} heatmap` : item.alt} className="aspect-[4/3] w-full object-contain" />
+      </button>
+      <h3 className="mt-4 text-2xl font-bold tracking-tight text-navy">{item.title}</h3>
+      <p className="mt-1 flex-1 text-muted">{item.help}</p>
+      {d && (
+        <p className="mt-3 border-t border-line pt-3 text-sm text-navy">
+          <span className="font-semibold">{d.label}</span>
+          {d.reliability > 0 && (
+            <>
+              {" · "}
+              <span className="font-bold" style={{ color: scoreColor(d.fake_score) }}>
+                {pct(d.fake_score)}% fake
+              </span>
+              {` · trust ${pct(d.reliability)}%`}
+            </>
+          )}
+        </p>
+      )}
+    </Card>
+  );
 }
 
-export default function EvidenceViewer({ id, detectors }) {
-  const maps = detectors.filter((d) => d.heatmap && OVERLAYS[d.name]);
+// Image evidence: every picture we have, all visible at once, side by side.
+export default function EvidenceViewer({ id, detectors = [] }) {
+  const [open, setOpen] = useState(null);
+  const src = originalUrl(id);
+
+  const maps = Object.keys(OVERLAYS)
+    .map((name) => detectors.find((d) => d.name === name && d.heatmap))
+    .filter(Boolean);
   const spectrum = detectors.find((d) => d.name === "fft" && d.heatmap);
-  const [tab, setTab] = useState(() => defaultTab(maps));
-  const [opacity, setOpacity] = useState(1);
-  const active = maps.find((d) => d.name === tab);
+
+  const items = [
+    { title: "Original", help: "The file as it was uploaded, with nothing added.", src, alt: "Uploaded file" },
+    ...maps.map((d) => ({ ...OVERLAYS[d.name], src, alt: "Uploaded file", overlay: artifactUrl(id, d.heatmap), detector: d })),
+    ...(spectrum ? [{ title: "Frequency spectrum", help: SPECTRUM_HELP, src: artifactUrl(id, spectrum.heatmap), alt: "Frequency spectrum", detector: spectrum }] : []),
+  ];
 
   return (
-    <section className="grid items-start gap-6 md:grid-cols-[2fr_1fr]">
-      <div className="rounded-xl border bg-white p-4">
-        {/* Tabs: original photo or one of the heatmaps */}
-        <div className="mb-3 flex flex-wrap gap-2">
-          {[{ name: "original" }, ...maps].map((d) => (
-            <button
-              key={d.name}
-              onClick={() => setTab(d.name)}
-              className={`rounded-full px-3 py-1 text-sm ${
-                tab === d.name ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-              }`}
-            >
-              {d.name === "original" ? "Original" : OVERLAYS[d.name].tab}
-            </button>
-          ))}
-        </div>
-
-        <div className="relative">
-          <img src={originalUrl(id)} alt="Uploaded file" className="w-full rounded" />
-          {active && (
-            // Heatmap images are the photo with colours added, so fading them shows the original below
-            <img
-              src={artifactUrl(id, active.heatmap)}
-              alt={`${OVERLAYS[active.name].tab} heatmap`}
-              className="absolute inset-0 h-full w-full rounded"
-              style={{ opacity }}
-            />
-          )}
-        </div>
-
-        {active && (
-          <>
-            <p className="mt-3 text-sm text-slate-600">{OVERLAYS[active.name].help}</p>
-            <label className="mt-2 flex items-center gap-3 text-sm text-slate-600">
-              Heatmap strength
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                value={opacity}
-                onChange={(e) => setOpacity(+e.target.value)}
-                className="flex-1"
-              />
-            </label>
-          </>
-        )}
-        {maps.length === 0 && <p className="mt-3 text-sm text-slate-500">No heatmaps for this file: no check found a suspicious area.</p>}
+    <section className="space-y-5">
+      <Heading pill="Evidence">in the image</Heading>
+      <div className={`grid gap-5 sm:grid-cols-2 ${COLUMNS[items.length]}`}>
+        {items.map((item, i) => (
+          <Tile
+            key={item.title}
+            item={item}
+            onOpen={() => setOpen(item)}
+            className={items.length === 5 ? (i < 2 ? "lg:col-span-3" : "lg:col-span-2") : ""}
+          />
+        ))}
       </div>
-
-      {spectrum && (
-        <div className="rounded-xl border bg-white p-4">
-          <h3 className="text-sm font-semibold">Frequency spectrum</h3>
-          <img src={artifactUrl(id, spectrum.heatmap)} alt="Frequency spectrum" className="mt-2 w-full rounded" />
-          <p className="mt-2 text-xs text-slate-500">
-            A map of the image's fine, repeating patterns. Bright isolated dots away from the centre can be a trace of AI
-            upsampling.
-          </p>
-        </div>
-      )}
+      {items.length === 1 && <p className="text-muted">No check produced a heatmap for this file.</p>}
+      {open && <Lightbox item={open} onClose={() => setOpen(null)} />}
     </section>
   );
 }

@@ -6,6 +6,7 @@ final explanation is simply the list of detectors that fired.
 """
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -31,6 +32,13 @@ class MediaContext:
     audio: np.ndarray | None = None
     # Sampled video frames (preprocessing/video.py Frame objects), filled in for videos
     frames: list | None = None
+    # Set by the runner to follow a detector's progress. Use report() instead of calling it.
+    on_item: Callable[[int, int, str], None] | None = None
+
+    def report(self, done: int, total: int, step: str) -> None:
+        """Tell the runner that `done` of `total` items are finished and what comes next."""
+        if self.on_item is not None:
+            self.on_item(done, total, step)
 
 
 @dataclass
