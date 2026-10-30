@@ -15,7 +15,7 @@ from PIL import Image
 
 from app.pipeline.preprocessing.audio import ffmpeg_exe
 
-MAX_FRAMES = 16
+MAX_FRAMES = 12
 MAX_FPS = 1.0  # short videos: at most one frame per second
 MAX_SIDE = 1280  # shrink big videos (4K) first; faces are still big enough
 
