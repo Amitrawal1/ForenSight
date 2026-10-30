@@ -50,6 +50,13 @@ export default function VerdictCard({ analysis, onDelete }) {
         {summary && <p className="mt-6 max-w-3xl text-2xl font-semibold leading-snug tracking-tight sm:text-3xl">{summary}</p>}
       </div>
 
+      {/* Authentic can sound final, so say plainly what the checks may not see. */}
+      {analysis.verdict === "likely_authentic" && (
+        <p className="border-b border-line p-5 text-lg leading-snug text-navy sm:px-10 sm:py-5">
+          <b>This does not rule out small AI edits.</b> Changes to only part of a photo, such as hair or clothes made with a tool like Gemini, may not be detected.
+        </p>
+      )}
+
       {/* File facts and buttons on white */}
       <div className="flex flex-wrap items-center justify-between gap-x-10 gap-y-5 p-5 sm:px-10 sm:py-6">
         {facts.length > 0 && (

@@ -44,6 +44,7 @@ NEXT_STEPS = {
     ],
     "likely_authentic": [
         "No signs of AI generation or editing were found, but this is not proof that it is real.",
+        "Small AI edits to only part of a photo, such as hair or clothes, may not be detected.",
         "If something still feels wrong (for example an urgent request for money), verify it anyway.",
     ],
 }
